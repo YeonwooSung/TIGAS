@@ -39,3 +39,6 @@ htmlcov/
 
 # virtualenv
 venv/
+
+# models
+model
