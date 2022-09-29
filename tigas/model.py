@@ -4,6 +4,15 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, UNet2DConditionModel, LMSDiscreteScheduler
 
 
+class ModelConfig:
+    height=512 # image height
+    width=512  # image width
+    batch_size=1  # batch size
+    num_inference_steps=100 # Number of denoising steps
+    guidance_scale=7.5  # Scale for classifier-free guidance
+    latent_scaling_factor=1 / 0.18215  # latent scaling factor
+
+
 class CustomTextToImageModel(nn.Module):
     def __init__(self, config, device, from_pretrained=False):
         super().__init__()
