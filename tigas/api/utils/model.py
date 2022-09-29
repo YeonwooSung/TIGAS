@@ -4,6 +4,12 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, UNet2DConditionModel, LMSDiscreteScheduler
 
 
+CLIP_TOKENIZER_PATH = '../../../model/tokenizer/'
+CLIP_TEXT_ENCODER_PATH = '../../../model/cliptext'
+UNET_MODEL_PATH = '../../../model/unet'
+VAE_MODEL_PATH = '../../../model/vae'
+
+
 class ModelConfig:
     height=512 # image height
     width=512  # image width
@@ -30,10 +36,10 @@ class CustomTextToImageModel(nn.Module):
             self.unet_model = UNet2DConditionModel.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="unet", use_auth_token=True).to(device)
             self.kl_model = AutoencoderKL.from_pretrained("CompVis/stable-diffusion-v1-4", subfolder="vae", use_auth_token=True).to(device)
         else:
-            self.clip_tokenizer = CLIPTokenizer.from_pretrained('./model/tokenizer/')
-            self.clip_model = CLIPTextModel.from_pretrained('./model/cliptext').to(device)
-            self.unet_model = UNet2DConditionModel.from_pretrained('./model/unet').to(device)
-            self.kl_model = AutoencoderKL.from_pretrained('./model/vae').to(device)
+            self.clip_tokenizer = CLIPTokenizer.from_pretrained(CLIP_TOKENIZER_PATH)
+            self.clip_model = CLIPTextModel.from_pretrained(CLIP_TEXT_ENCODER_PATH).to(device)
+            self.unet_model = UNet2DConditionModel.from_pretrained(UNET_MODEL_PATH).to(device)
+            self.kl_model = AutoencoderKL.from_pretrained(VAE_MODEL_PATH).to(device)
 
         # generate UNet scheduler
         self.scheduler = LMSDiscreteScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000)
