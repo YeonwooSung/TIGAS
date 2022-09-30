@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from api import mount_api_subapplications
@@ -14,8 +15,20 @@ class Server:
     ):
         self.name = app_name
         self.app = FastAPI()
+        self.allow_cors()
         self.mount_api_versions()
         self.add_index()
+    
+
+    @private
+    def allow_cors(self, origins: list=['*']):
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     @private
     def mount_api_versions(self):
