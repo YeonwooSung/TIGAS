@@ -4,10 +4,15 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, UNet2DConditionModel, LMSDiscreteScheduler
 
 
-CLIP_TOKENIZER_PATH = '../../../model/tokenizer/'
-CLIP_TEXT_ENCODER_PATH = '../../../model/cliptext'
-UNET_MODEL_PATH = '../../../model/unet'
-VAE_MODEL_PATH = '../../../model/vae'
+# CLIP_TOKENIZER_PATH = '/Users/YeonwooSung/Desktop/TIGAS/model/tokenizer/'
+# CLIP_TEXT_ENCODER_PATH = '/Users/YeonwooSung/Desktop/TIGAS/model/cliptext'
+# UNET_MODEL_PATH = '/Users/YeonwooSung/Desktop/TIGAS/model/unet'
+# VAE_MODEL_PATH = '/Users/YeonwooSung/Desktop/TIGAS/model/vae'
+
+CLIP_TOKENIZER_PATH = '/home/ys60/TIGAS/model/tokenizer/'
+CLIP_TEXT_ENCODER_PATH = '/home/ys60/TIGAS/model/cliptext'
+UNET_MODEL_PATH = '/home/ys60/TIGAS/model/unet'
+VAE_MODEL_PATH = '/home/ys60/TIGAS/model/vae'
 
 
 class ModelConfig:
