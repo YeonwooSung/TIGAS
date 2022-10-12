@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from io import BytesIO
 import torch
+import uuid
 from PIL import Image
 
 
@@ -40,11 +41,15 @@ def convert_model_generate_img_to_pillow_img(image):
 
 @router.get("/sample", tags=["generate"])
 async def get_user():
+    sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
     with torch.no_grad():
         sample_image = model(sample_text)
     pil_image = convert_model_generate_img_to_pillow_img(sample_image)
-    return StreamingResponse(BytesIO(pil_image), media_type="image/png")
+    img_name = f'{str(sample_uuid)}.png'
+    pil_image.save(img_name)
+    return FileResponse(img_name)
+    #return StreamingResponse(BytesIO(pil_image), media_type="image/png")
     # img_converted = from_image_to_bytes(pil_image)
     # return JSONResponse([img_converted])
 
