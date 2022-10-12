@@ -1,6 +1,6 @@
 import base64
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
+from fastapi.responses import FileResponse
 from io import BytesIO
 import torch
 import uuid
@@ -38,7 +38,7 @@ def convert_model_generate_img_to_pillow_img(image):
     return pil_images[0]
 
 
-@router.get("/sample", tags=["generate"])
+@router.get("/sample", tags=["generate"], response_class=FileResponse)
 async def generate_sample_image():
     sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
@@ -48,12 +48,9 @@ async def generate_sample_image():
     img_name = f'{str(sample_uuid)}.png'
     pil_image.save(img_name)
     return FileResponse(img_name)
-    #return StreamingResponse(BytesIO(pil_image), media_type="image/png")
-    # img_converted = from_image_to_bytes(pil_image)
-    # return JSONResponse([img_converted])
 
 
-@router.post("/tti", tags=["generate"])
+@router.post("/tti", tags=["generate"], response_class=FileResponse)
 async def generate_image_from_text(info : Request):
     req_info = await info.json()
     if 'text' in req_info:
@@ -67,4 +64,3 @@ async def generate_image_from_text(info : Request):
         return FileResponse(img_name)
     return HTTPException(status_code=400, detail="Need text to process text-to-image")
     #return {"message": "Hello World"}
-
