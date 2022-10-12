@@ -120,10 +120,11 @@ class CustomTextToImageModel(nn.Module):
 def run_model_test():
     config = ModelConfig()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = CustomTextToImageModel(config, device, from_pretrained=True)
+    model = CustomTextToImageModel(config, device, from_pretrained=False)
     model.eval()
     sample_text = 'Dogs running on a beach'
-    image = model(sample_text)
+    with torch.no_grad():
+        image = model(sample_text)
     image = (image / 2 + 0.5).clamp(0, 1)
     image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
     images = (image * 255).round().astype("uint8")
