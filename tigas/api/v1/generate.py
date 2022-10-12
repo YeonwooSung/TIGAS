@@ -10,6 +10,7 @@ from .. import utils
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=False)
+model.eval()
 router = APIRouter()
 
 #TODO write codes to generate image
@@ -40,7 +41,8 @@ def convert_model_generate_img_to_pillow_img(image):
 @router.get("/sample", tags=["generate"])
 async def get_user():
     sample_text = 'Dogs running on a beach'
-    sample_image = model(sample_text)
+    with torch.no_grad():
+        sample_image = model(sample_text)
     pil_image = convert_model_generate_img_to_pillow_img(sample_image)
     return StreamingResponse(BytesIO(pil_image), media_type="image/png")
     # img_converted = from_image_to_bytes(pil_image)
