@@ -1,5 +1,5 @@
 import base64
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from io import BytesIO
 import torch
@@ -14,7 +14,6 @@ model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=
 model.eval()
 router = APIRouter()
 
-#TODO write codes to generate image
 
 
 def from_image_to_bytes(img):
@@ -40,7 +39,7 @@ def convert_model_generate_img_to_pillow_img(image):
 
 
 @router.get("/sample", tags=["generate"])
-async def get_user():
+async def generate_sample_image():
     sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
     with torch.no_grad():
@@ -54,6 +53,18 @@ async def get_user():
     # return JSONResponse([img_converted])
 
 
-@router.post("/", tags=["generate"])
-async def create_user():
-    return {"message": "Hello World"}
+@router.post("/tti", tags=["generate"])
+async def generate_image_from_text(info : Request):
+    req_info = await info.json()
+    if 'text' in req_info:
+        sample_uuid = uuid.uuid4()
+        text = req_info['text']
+        with torch.no_grad():
+            image = model(text)
+        pil_image = convert_model_generate_img_to_pillow_img(image)
+        img_name = f'{str(sample_uuid)}.png'
+        pil_image.save(img_name)
+        return FileResponse(img_name)
+    return HTTPException(status_code=400, detail="Need text to process text-to-image")
+    #return {"message": "Hello World"}
+
