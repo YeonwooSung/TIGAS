@@ -115,3 +115,21 @@ class CustomTextToImageModel(nn.Module):
         num_inference_steps = self.config.num_inference_steps
         self.scheduler.set_timesteps(num_inference_steps)
         return latents * self.scheduler.sigmas[0]
+
+
+def run_model_test():
+    config = ModelConfig()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = CustomTextToImageModel(config, device, from_pretrained=True)
+    model.eval()
+    sample_text = 'Dogs running on a beach'
+    image = model(sample_text)
+    image = (image / 2 + 0.5).clamp(0, 1)
+    image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
+    images = (image * 255).round().astype("uint8")
+    from PIL import Image
+    pil_images = [Image.fromarray(image) for image in images]
+    pil_images[0].save('sample.png')
+
+if __name__ == '__main__':
+    run_model_test()
