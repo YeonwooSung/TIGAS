@@ -13,11 +13,27 @@ from PIL import Image
 
 from .. import utils
 
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=False)
 model.eval()
+
+# ------------------------------------
+# constants
+LOG_DIR_PATH = '/home/ys60/logs/'
+IMG_DIR_PATH = '/home/ys60/images/'
 MAX_LEN = 10
+# ------------------------------------
+
+# check if essential directories exist
+if not os.path.isdir(IMG_DIR_PATH):
+    os.mkdir(IMG_DIR_PATH)
+if not os.path.isdir(LOG_DIR_PATH):
+    os.mkdir(LOG_DIR_PATH)
+
 TTI_QUEUE = deque(maxlen=MAX_LEN)
+
+tti_logger = utils.StableLogger(f'{LOG_DIR_PATH}tti.log', name='tti_logger')
 
 router = APIRouter()
 
@@ -52,26 +68,30 @@ def wait_until_file_exists(path:str):
 def check_if_prompt_is_in_queue(prompt):
     for i in range(len(TTI_QUEUE)):
         if TTI_QUEUE[i].prompt == prompt:
-            return True
-    return False
+            return True, TTI_QUEUE[i].uuid
+    return False, None
 
 
 @router.get("/sample", tags=["generate"], response_class=FileResponse)
 async def generate_sample_image():
     sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
-    img_name = f'{str(sample_uuid)}.png'
     try:
         obj = utils.TTI_Form(prompt=sample_text, uuid=sample_uuid)
         
         # check if queue is full
         if len(TTI_QUEUE) >= MAX_LEN:
             # check if duplicating prompt exists
-            if check_if_prompt_is_in_queue(sample_text):
+            has_duplicating, target_uuid = check_if_prompt_is_in_queue(sample_text)
+            if has_duplicating:
+                tti_logger.log(f'Found duplicating prompt: {sample_text} -> original uuid: {target_uuid}, requested uuid: {sample_uuid}')
+                img_name = f'{IMG_DIR_PATH}{target_uuid}.png'
                 wait_until_file_exists(img_name)
                 return FileResponse(img_name)
+            tti_logger.log(f'Queue is full.. Block new request: prompt="{sample_text}" uuid="{sample_uuid}"', level='warn')
             return HTTPException(status_code=429, detail="Too Many Requests")
         TTI_QUEUE.append(obj)
+        tti_logger.log(f'/sample :: uuid="{sample_uuid}", prompt="{sample_text}"')
         
         # forward propagation for inference
         with torch.no_grad():
@@ -82,10 +102,12 @@ async def generate_sample_image():
 
         # convert tensor to pillow image        
         pil_image = convert_model_generate_img_to_pillow_img(sample_image)
+        img_name = f'{IMG_DIR_PATH}{str(sample_uuid)}.png'
+        tti_logger.log(f'/sample :: uuid="{sample_uuid}", img_name="{img_name}"')
         pil_image.save(img_name)
         return FileResponse(img_name)
     except Exception as e:
-        print(e)
+        tti_logger.log(f'/sample :: uuid="{sample_uuid}", error="{e}"', level='error')
         raise HTTPException(status_code=500, detail="Internal Server Error")
     
 
@@ -98,16 +120,20 @@ async def generate_image_from_text(info : Request):
             sample_uuid = uuid.uuid4()
             text = req_info['text']
             obj = utils.TTI_Form(prompt=text, uuid=sample_uuid)
-            img_name = f'{str(sample_uuid)}.png'
 
             # check if queue is full
             if len(TTI_QUEUE) >= MAX_LEN:
                 # check if duplicating prompt exists
-                if check_if_prompt_is_in_queue(text):
+                has_duplicating, target_uuid = check_if_prompt_is_in_queue(text)
+                if has_duplicating:
+                    tti_logger.log(f'Found duplicating prompt: {text} -> original uuid: {target_uuid}, requested uuid: {sample_uuid}')
+                    img_name = f'{IMG_DIR_PATH}{target_uuid}.png'
                     wait_until_file_exists(img_name)
                     return FileResponse(img_name)
+                tti_logger.log(f'Queue is full.. Block new request: prompt="{text}" uuid="{sample_uuid}"', level='warn')
                 return HTTPException(status_code=429, detail="Too Many Requests")
             TTI_QUEUE.append(obj)
+            tti_logger.log(f'/tti :: uuid="{sample_uuid}", prompt="{text}"')
 
             # forward propagation for inference
             with torch.no_grad():
@@ -118,10 +144,13 @@ async def generate_image_from_text(info : Request):
 
             # convert tensor to pillow image
             pil_image = convert_model_generate_img_to_pillow_img(image)
+            img_name = f'{IMG_DIR_PATH}{str(sample_uuid)}.png'
             pil_image.save(img_name)
+            tti_logger.log(f'/tti :: uuid="{sample_uuid}", img_name="{img_name}"')
             return FileResponse(img_name)
         else:
+            tti_logger.log(f'/tti :: error="No text in request"', level='warn')
             return HTTPException(status_code=400, detail="Need text to process text-to-image")
     except Exception as e:
-        print(e)
+        tti_logger.log(f'/tti :: uuid="{sample_uuid}", error="{e}"', level='error')
         raise HTTPException(status_code=500, detail="Internal Server Error")
