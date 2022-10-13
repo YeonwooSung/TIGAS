@@ -1,8 +1,11 @@
 import base64
 from collections import deque
+from genericpath import isfile
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import FileResponse
 from io import BytesIO
+import os
+import time
 import torch
 import uuid
 from PIL import Image
@@ -13,7 +16,8 @@ from .. import utils
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=False)
 model.eval()
-TTI_QUEUE = deque(maxlen=10)
+MAX_LEN = 10
+TTI_QUEUE = deque(maxlen=MAX_LEN)
 
 router = APIRouter()
 
@@ -41,15 +45,31 @@ def convert_model_generate_img_to_pillow_img(image):
     return pil_images[0]
 
 
+def wait_until_file_exists(path:str):
+    while not os.path.isfile(path):
+        time.sleep(10)
+
+def check_if_prompt_is_in_queue(prompt):
+    for i in range(len(TTI_QUEUE)):
+        if TTI_QUEUE[i].prompt == prompt:
+            return True
+    return False
+
+
 @router.get("/sample", tags=["generate"], response_class=FileResponse)
 async def generate_sample_image():
     sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
+    img_name = f'{str(sample_uuid)}.png'
     try:
         obj = utils.TTI_Form(prompt=sample_text, uuid=sample_uuid)
         
-        if len(TTI_QUEUE) >= TTI_QUEUE.maxlen:
-            #TODO: duplicate prompt -> wait until the target image is generated
+        # check if queue is full
+        if len(TTI_QUEUE) >= MAX_LEN:
+            # check if duplicating prompt exists
+            if check_if_prompt_is_in_queue(sample_text):
+                wait_until_file_exists(img_name)
+                return FileResponse(img_name)
             return HTTPException(status_code=429, detail="Too Many Requests")
         TTI_QUEUE.append(obj)
         
@@ -62,7 +82,6 @@ async def generate_sample_image():
 
         # convert tensor to pillow image        
         pil_image = convert_model_generate_img_to_pillow_img(sample_image)
-        img_name = f'{str(sample_uuid)}.png'
         pil_image.save(img_name)
         return FileResponse(img_name)
     except Exception as e:
@@ -79,9 +98,14 @@ async def generate_image_from_text(info : Request):
             sample_uuid = uuid.uuid4()
             text = req_info['text']
             obj = utils.TTI_Form(prompt=text, uuid=sample_uuid)
+            img_name = f'{str(sample_uuid)}.png'
 
-            if len(TTI_QUEUE) >= TTI_QUEUE.maxlen:
-                #TODO: duplicate prompt -> wait until the target image is generated
+            # check if queue is full
+            if len(TTI_QUEUE) >= MAX_LEN:
+                # check if duplicating prompt exists
+                if check_if_prompt_is_in_queue(text):
+                    wait_until_file_exists(img_name)
+                    return FileResponse(img_name)
                 return HTTPException(status_code=429, detail="Too Many Requests")
             TTI_QUEUE.append(obj)
 
@@ -94,7 +118,6 @@ async def generate_image_from_text(info : Request):
 
             # convert tensor to pillow image
             pil_image = convert_model_generate_img_to_pillow_img(image)
-            img_name = f'{str(sample_uuid)}.png'
             pil_image.save(img_name)
             return FileResponse(img_name)
         else:
