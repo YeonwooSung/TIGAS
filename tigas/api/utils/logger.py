@@ -7,7 +7,7 @@ class Formatter(logging.Formatter):
     """override logging.Formatter to use an aware datetime object"""
     def converter(self, timestamp):
         dt = datetime.datetime.fromtimestamp(timestamp)
-        tzinfo = pytz.timezone('Korea/Seoul')
+        tzinfo = pytz.timezone('Asia/Seoul')
         return tzinfo.localize(dt)
         
     def formatTime(self, record, datefmt=None):
