@@ -46,7 +46,7 @@ async def generate_sample_image():
     sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
     try:
-        obj = utils.TTI_Form(uuid=sample_uuid, text=sample_text)
+        obj = utils.TTI_Form(prompt=sample_text, uuid=sample_uuid)
         
         if len(TTI_QUEUE) == TTI_QUEUE.maxlen:
             #TODO: duplicate prompt -> wait until the target image is generated
@@ -65,7 +65,8 @@ async def generate_sample_image():
         img_name = f'{str(sample_uuid)}.png'
         pil_image.save(img_name)
         return FileResponse(img_name)
-    except:
+    except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail="Internal Server Error")
     
 
@@ -77,7 +78,7 @@ async def generate_image_from_text(info : Request):
         if 'text' in req_info:
             sample_uuid = uuid.uuid4()
             text = req_info['text']
-            obj = utils.TTI_Form(uuid=sample_uuid, text=text)
+            obj = utils.TTI_Form(prompt=text, uuid=sample_uuid)
 
             if len(TTI_QUEUE) == TTI_QUEUE.maxlen:
                 #TODO: duplicate prompt -> wait until the target image is generated
