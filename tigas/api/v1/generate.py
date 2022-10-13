@@ -1,4 +1,5 @@
 import base64
+from collections import deque
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import FileResponse
 from io import BytesIO
@@ -12,6 +13,8 @@ from .. import utils
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=False)
 model.eval()
+TTI_QUEUE = deque(maxlen=10)
+
 router = APIRouter()
 
 
@@ -42,25 +45,58 @@ def convert_model_generate_img_to_pillow_img(image):
 async def generate_sample_image():
     sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
-    with torch.no_grad():
-        sample_image = model(sample_text)
-    pil_image = convert_model_generate_img_to_pillow_img(sample_image)
-    img_name = f'{str(sample_uuid)}.png'
-    pil_image.save(img_name)
-    return FileResponse(img_name)
+    try:
+        obj = utils.TTI_Form(uuid=sample_uuid, text=sample_text)
+        
+        if len(TTI_QUEUE) == TTI_QUEUE.maxlen:
+            #TODO: duplicate prompt -> wait until the target image is generated
+            raise HTTPException(status_code=429, detail="Too Many Requests")
+        TTI_QUEUE.append(obj)
+        
+        # forward propagation for inference
+        with torch.no_grad():
+            sample_image = model(sample_text)
+
+        # clean up the queue
+        TTI_QUEUE.remove(obj)
+
+        # convert tensor to pillow image        
+        pil_image = convert_model_generate_img_to_pillow_img(sample_image)
+        img_name = f'{str(sample_uuid)}.png'
+        pil_image.save(img_name)
+        return FileResponse(img_name)
+    except:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    
 
 
 @router.post("/tti", tags=["generate"], response_class=FileResponse)
 async def generate_image_from_text(info : Request):
-    req_info = await info.json()
-    if 'text' in req_info:
-        sample_uuid = uuid.uuid4()
-        text = req_info['text']
-        with torch.no_grad():
-            image = model(text)
-        pil_image = convert_model_generate_img_to_pillow_img(image)
-        img_name = f'{str(sample_uuid)}.png'
-        pil_image.save(img_name)
-        return FileResponse(img_name)
-    return HTTPException(status_code=400, detail="Need text to process text-to-image")
-    #return {"message": "Hello World"}
+    try:
+        req_info = await info.json()
+        if 'text' in req_info:
+            sample_uuid = uuid.uuid4()
+            text = req_info['text']
+            obj = utils.TTI_Form(uuid=sample_uuid, text=text)
+
+            if len(TTI_QUEUE) == TTI_QUEUE.maxlen:
+                #TODO: duplicate prompt -> wait until the target image is generated
+                raise HTTPException(status_code=429, detail="Too Many Requests")
+            TTI_QUEUE.append(obj)
+
+            # forward propagation for inference
+            with torch.no_grad():
+                image = model(text)
+            
+            # clean up the queue
+            TTI_QUEUE.remove(obj)
+
+            # convert tensor to pillow image
+            pil_image = convert_model_generate_img_to_pillow_img(image)
+            img_name = f'{str(sample_uuid)}.png'
+            pil_image.save(img_name)
+            return FileResponse(img_name)
+        else:
+            return HTTPException(status_code=400, detail="Need text to process text-to-image")
+    except:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
