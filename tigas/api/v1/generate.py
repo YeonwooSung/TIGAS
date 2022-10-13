@@ -98,5 +98,6 @@ async def generate_image_from_text(info : Request):
             return FileResponse(img_name)
         else:
             return HTTPException(status_code=400, detail="Need text to process text-to-image")
-    except:
+    except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail="Internal Server Error")
