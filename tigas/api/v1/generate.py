@@ -48,9 +48,9 @@ async def generate_sample_image():
     try:
         obj = utils.TTI_Form(prompt=sample_text, uuid=sample_uuid)
         
-        if len(TTI_QUEUE) == TTI_QUEUE.maxlen:
+        if len(TTI_QUEUE) >= TTI_QUEUE.maxlen:
             #TODO: duplicate prompt -> wait until the target image is generated
-            raise HTTPException(status_code=429, detail="Too Many Requests")
+            return HTTPException(status_code=429, detail="Too Many Requests")
         TTI_QUEUE.append(obj)
         
         # forward propagation for inference
@@ -80,9 +80,9 @@ async def generate_image_from_text(info : Request):
             text = req_info['text']
             obj = utils.TTI_Form(prompt=text, uuid=sample_uuid)
 
-            if len(TTI_QUEUE) == TTI_QUEUE.maxlen:
+            if len(TTI_QUEUE) >= TTI_QUEUE.maxlen:
                 #TODO: duplicate prompt -> wait until the target image is generated
-                raise HTTPException(status_code=429, detail="Too Many Requests")
+                return HTTPException(status_code=429, detail="Too Many Requests")
             TTI_QUEUE.append(obj)
 
             # forward propagation for inference
