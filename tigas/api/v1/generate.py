@@ -123,13 +123,6 @@ async def generate_image_from_text(info : Request):
 
             # check if queue is full
             if len(TTI_QUEUE) >= MAX_LEN:
-                # check if duplicating prompt exists
-                has_duplicating, target_uuid = check_if_prompt_is_in_queue(text)
-                if has_duplicating:
-                    tti_logger.log(f'Found duplicating prompt: {text} -> original uuid: {target_uuid}, requested uuid: {sample_uuid}')
-                    img_name = f'{IMG_DIR_PATH}{target_uuid}.png'
-                    wait_until_file_exists(img_name)
-                    return FileResponse(img_name)
                 tti_logger.log(f'Queue is full.. Block new request: prompt="{text}" uuid="{sample_uuid}"', level='warn')
                 return HTTPException(status_code=429, detail="Too Many Requests")
             TTI_QUEUE.append(obj)
