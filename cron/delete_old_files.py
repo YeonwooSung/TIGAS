@@ -1,8 +1,16 @@
 import os
 import time
+import yaml
 
-TARGET_HOURS = 2
-SLEEP_MINUTES = 5
+
+with open('cron.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+    cron_cycle_config = config['cron']['cleanUp']['cycleInterval']
+    _SLEEP_INTERVAL = cron_cycle_config['sleep']
+    _ACTIVATE_INTERVAL = cron_cycle_config['activate']
+
+TARGET_HOURS = _ACTIVATE_INTERVAL
+SLEEP_MINUTES = _SLEEP_INTERVAL
 
 HOUR_TO_MINUTES = 60
 MINUTES_TO_SECONDS = 60
