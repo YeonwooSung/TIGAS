@@ -1,7 +1,10 @@
+import threading
 import uvicorn
+import yaml
+
 from server import Server
 from api import signin_router
-import yaml
+from tti import inference_loop
 
 
 def parse_config():
@@ -22,4 +25,8 @@ if __name__ == '__main__':
         server.add_endpoint('/signin', 'signin', signin_router)
     except:
         print('failed to add endpoints')
+
+    # make a new thread with inference_loop function
+    inference_thread = threading.Thread(target=inference_loop)
+
     uvicorn.run(server.app, host=host, port=port)

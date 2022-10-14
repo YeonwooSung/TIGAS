@@ -16,9 +16,9 @@ import yaml
 from .. import utils
 
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=False)
-model.eval()
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=False)
+# model.eval()
 
 tti_lock = threading.Lock()
 
@@ -76,17 +76,6 @@ def convert_model_generate_img_to_pillow_img(image):
     return pil_images[0]
 
 
-def wait_until_file_exists(path:str):
-    while not os.path.isfile(path):
-        time.sleep(10)
-
-def check_if_prompt_is_in_queue(prompt):
-    for i in range(len(TTI_QUEUE)):
-        if TTI_QUEUE[i].prompt == prompt:
-            return True, TTI_QUEUE[i].uuid
-    return False, None
-
-
 @router.get("/sample", tags=["generate"], response_class=FileResponse)
 async def generate_sample_image():
     sample_uuid = uuid.uuid4()
@@ -96,13 +85,6 @@ async def generate_sample_image():
         
         # check if queue is full
         if len(TTI_QUEUE) >= MAX_LEN:
-            # check if duplicating prompt exists
-            has_duplicating, target_uuid = check_if_prompt_is_in_queue(sample_text)
-            if has_duplicating:
-                tti_logger.log(f'Found duplicating prompt: {sample_text} -> original uuid: {target_uuid}, requested uuid: {sample_uuid}')
-                img_name = f'{IMG_DIR_PATH}{target_uuid}.png'
-                wait_until_file_exists(img_name)
-                return FileResponse(img_name)
             tti_logger.log(f'Queue is full.. Block new request: prompt="{sample_text}" uuid="{sample_uuid}"', level='warn')
             return HTTPException(status_code=429, detail="Too Many Requests")
         TTI_QUEUE.append(obj)
@@ -144,7 +126,7 @@ async def generate_image_from_text(info : Request):
             TTI_QUEUE.append(obj)
             tti_logger.log(f'/tti :: uuid="{sample_uuid}", prompt="{text}"')
 
-            tti_lock.acquire()
+            # tti_lock.acquire()
 
             # forward propagation for inference
             with torch.no_grad():
@@ -160,7 +142,7 @@ async def generate_image_from_text(info : Request):
             pil_image.save(img_name)
             tti_logger.log(f'/tti :: uuid="{sample_uuid}", img_name="{img_name}"')
             
-            tti_lock.release()
+            # tti_lock.release()
             return FileResponse(img_name)
         else:
             tti_logger.log(f'/tti :: error="No text in request"', level='warn')
