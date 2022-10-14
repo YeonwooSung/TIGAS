@@ -3,3 +3,7 @@ cron:
     cycleInterval:
       sleep: 5
       activate: 2
+  cleanUpNodeAssets:
+    cycleInterval:
+      sleep: 3
+      activate: 1
