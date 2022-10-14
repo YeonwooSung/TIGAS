@@ -28,5 +28,6 @@ if __name__ == '__main__':
 
     # make a new thread with inference_loop function
     inference_thread = threading.Thread(target=inference_loop)
+    inference_thread.start()
 
     uvicorn.run(server.app, host=host, port=port)
