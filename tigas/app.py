@@ -5,7 +5,7 @@ import yaml
 
 
 def parse_config():
-    with open('config.yaml') as f:
+    with open('tigas.yaml') as f:
         parsed_yaml = yaml.safe_load(f)
         tigas_conf = parsed_yaml['tigas']
         port = int(tigas_conf['port'] if 'port' in tigas_conf else '5000')
