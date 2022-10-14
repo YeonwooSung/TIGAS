@@ -1,0 +1,29 @@
+kind: Deployment
+tigas:
+  port: 5000
+  host: 0.0.0.0
+  apiVersion:
+    - v1
+  name: tigas
+  
+  generate:
+    tti:
+      max: 10
+      path:
+        log: /home/ys60/logs/
+        img: /home/ys60/images/
+  
+  model:
+    tti:
+      height: 512
+      width: 512
+      bs: 1
+      inferenceSteps: 100
+      guidanceScale: 7.5
+      latentScalingFactor: 0.18215
+    path:
+      clip:
+        tokenizer: /home/ys60/TIGAS/model/tokenizer/
+        encoder: /home/ys60/TIGAS/model/cliptext
+      unet: /home/ys60/TIGAS/model/unet
+      vae: /home/ys60/TIGAS/model/vae

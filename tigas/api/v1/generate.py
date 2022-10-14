@@ -9,6 +9,7 @@ import time
 import torch
 import uuid
 from PIL import Image
+import yaml
 
 
 from .. import utils
@@ -18,11 +19,22 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=False)
 model.eval()
 
+
+# parse config file
+with open('tigas.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+    tti_generate_config = config['tigas']['generate']['tti']
+    _MAX_SIZE = tti_generate_config['max']
+    path_config = tti_generate_config['path']
+    _LOG_DIR_PATH = path_config['log'] if 'log' in path_config else '/home/ys60/logs/'
+    _IMG_DIR_PATH = path_config['img'] if 'img' in path_config else '/home/ys60/images/'
+
+
 # ------------------------------------
 # constants
-LOG_DIR_PATH = '/home/ys60/logs/'
-IMG_DIR_PATH = '/home/ys60/images/'
-MAX_LEN = 10
+LOG_DIR_PATH = _LOG_DIR_PATH
+IMG_DIR_PATH = _IMG_DIR_PATH
+MAX_LEN = _MAX_SIZE
 # ------------------------------------
 
 # check if essential directories exist

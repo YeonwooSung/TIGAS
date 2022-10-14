@@ -3,25 +3,41 @@ from torch import nn, autocast
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, UNet2DConditionModel, LMSDiscreteScheduler
 
+import yaml
 
-# CLIP_TOKENIZER_PATH = '/Users/YeonwooSung/Desktop/TIGAS/model/tokenizer/'
-# CLIP_TEXT_ENCODER_PATH = '/Users/YeonwooSung/Desktop/TIGAS/model/cliptext'
-# UNET_MODEL_PATH = '/Users/YeonwooSung/Desktop/TIGAS/model/unet'
-# VAE_MODEL_PATH = '/Users/YeonwooSung/Desktop/TIGAS/model/vae'
 
-CLIP_TOKENIZER_PATH = '/home/ys60/TIGAS/model/tokenizer/'
-CLIP_TEXT_ENCODER_PATH = '/home/ys60/TIGAS/model/cliptext'
-UNET_MODEL_PATH = '/home/ys60/TIGAS/model/unet'
-VAE_MODEL_PATH = '/home/ys60/TIGAS/model/vae'
+with open('tigas.yaml') as f:
+    parsed_yaml = yaml.safe_load(f)
+    model_conf = parsed_yaml['tigas']['model']
+    tti_conf = model_conf['tti']
+    HEIGHT = int(tti_conf['height'] if 'height' in tti_conf else '512')
+    WIDTH = int(tti_conf['width'] if 'width' in tti_conf else '512')
+    BS = int(tti_conf['bs'] if 'bs' in tti_conf else '1')
+    NUM_INFERENCE_STEP = int(tti_conf['inferenceSteps'] if 'inferenceSteps' in tti_conf else '100')
+    GUIDANCE_SCALE = float(tti_conf['guidanceScale'] if 'guidanceScale' in tti_conf else '7.5')
+    LATENT_SCALING_FACTOR = float(tti_conf['latentScalingFactor'] if 'latentScalingFactor' in tti_conf else '0.18215')
+    
+    path_conf = model_conf['path']
+    clip_path_conf = path_conf['clip']
+    _CLIP_TOKENIZER_PATH = clip_path_conf['tokenizer']
+    _CLIP_TEXT_ENCODER_PATH = clip_path_conf['encoder']
+    _UNET_MODEL_PATH = path_conf['unet']
+    _VAE_MODEL_PATH = path_conf['vae']
+
+
+CLIP_TOKENIZER_PATH = _CLIP_TOKENIZER_PATH
+CLIP_TEXT_ENCODER_PATH = _CLIP_TEXT_ENCODER_PATH
+UNET_MODEL_PATH = _UNET_MODEL_PATH
+VAE_MODEL_PATH = _VAE_MODEL_PATH
 
 
 class ModelConfig:
-    height=512 # image height
-    width=512  # image width
-    batch_size=1  # batch size
-    num_inference_steps=100 # Number of denoising steps
-    guidance_scale=7.5  # Scale for classifier-free guidance
-    latent_scaling_factor=1 / 0.18215  # latent scaling factor
+    height=HEIGHT # image height
+    width=WIDTH  # image width
+    batch_size=BS  # batch size
+    num_inference_steps=NUM_INFERENCE_STEP # Number of denoising steps
+    guidance_scale=GUIDANCE_SCALE  # Scale for classifier-free guidance
+    latent_scaling_factor=1 / LATENT_SCALING_FACTOR  # latent scaling factor
 
 
 class CustomTextToImageModel(nn.Module):
