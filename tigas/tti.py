@@ -23,7 +23,7 @@ def generate_image(model, text):
     Generates an image from the given text.
     '''
     with torch.no_grad():
-        image = model.generate(text)
+        image = model(text)
     # convert tensor to pillow image
     pil_image = convert_model_generate_img_to_pillow_img(image)
     return pil_image
@@ -58,6 +58,6 @@ def inference_loop():
             # save the image
             pil_image.save(img_path)
             # save log
-            inference_logger.info(f'user={uuid} - generated image for "{prompt}"')
+            inference_logger.log(f'user={uuid} - generated image for "{prompt}"')
         print('remaining requests = ',len(queue))
         time.sleep(interval)

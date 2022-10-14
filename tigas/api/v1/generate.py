@@ -142,6 +142,7 @@ async def get_image_from_uuid(uuid: str):
         
         # check if image exists
         if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
+            print('here')
             tti_logger.log(f'/tti/{uuid} :: error="Image not found"', level='warning')
             return HTTPException(status_code=404, detail="Image not found")
         
