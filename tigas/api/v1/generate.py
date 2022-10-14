@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import FileResponse
 from io import BytesIO
 import os
+import threading
 import time
 import torch
 import uuid
@@ -18,6 +19,8 @@ from .. import utils
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=False)
 model.eval()
+
+tti_lock = threading.Lock()
 
 
 # parse config file
@@ -141,6 +144,8 @@ async def generate_image_from_text(info : Request):
             TTI_QUEUE.append(obj)
             tti_logger.log(f'/tti :: uuid="{sample_uuid}", prompt="{text}"')
 
+            tti_lock.acquire()
+
             # forward propagation for inference
             with torch.no_grad():
                 image = model(text)
@@ -154,6 +159,8 @@ async def generate_image_from_text(info : Request):
             img_name = f'{IMG_DIR_PATH}{str(sample_uuid)}.png'
             pil_image.save(img_name)
             tti_logger.log(f'/tti :: uuid="{sample_uuid}", img_name="{img_name}"')
+            
+            tti_lock.release()
             return FileResponse(img_name)
         else:
             tti_logger.log(f'/tti :: error="No text in request"', level='warn')

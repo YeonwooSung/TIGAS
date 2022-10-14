@@ -22,4 +22,4 @@ if __name__ == '__main__':
         server.add_endpoint('/signin', 'signin', signin_router)
     except:
         print('failed to add endpoints')
-    uvicorn.run(server.app, host=host, port=port)
+    uvicorn.run(server.app, host=host, port=port, workers=8)
