@@ -23,4 +23,4 @@ if __name__ == '__main__':
     # except:
     #     print('failed to add endpoints')
     # uvicorn.run(server.app, host=host, port=port)
-    uvicorn.run('server:app', host=host, port=port, workers=4)
+    uvicorn.run('server:app', host=host, port=port, workers=2)
