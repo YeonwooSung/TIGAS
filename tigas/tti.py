@@ -49,8 +49,8 @@ def inference_loop():
         if len(queue) > 0:
             # get the first item in the queue
             user_info = queue.popleft()
-            uuid = user_info['uuid']
-            prompt = user_info['prompt']
+            uuid = user_info.uuid
+            prompt = user_info.prompt
 
             # generate the image from text
             pil_image = generate_image(model, prompt)
