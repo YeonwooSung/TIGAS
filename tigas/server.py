@@ -53,3 +53,7 @@ class Server:
         if handler is None:
             raise ValueError('Handler is required')
         self.app.include_router(handler, prefix=endpoint, tags=[endpoint_name])
+
+
+server = Server()
+app = server.app

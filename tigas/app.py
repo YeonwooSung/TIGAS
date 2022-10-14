@@ -17,9 +17,10 @@ def parse_config():
 
 if __name__ == '__main__':
     port, host, name = parse_config()
-    server = Server(name=name)
-    try:
-        server.add_endpoint('/signin', 'signin', signin_router)
-    except:
-        print('failed to add endpoints')
-    uvicorn.run(server.app, host=host, port=port, workers=8)
+    # server = Server(name=name)
+    # try:
+    #     server.add_endpoint('/signin', 'signin', signin_router)
+    # except:
+    #     print('failed to add endpoints')
+    # uvicorn.run(server.app, host=host, port=port)
+    uvicorn.run('server:app', host=host, port=port, workers=4)
