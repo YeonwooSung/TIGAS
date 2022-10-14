@@ -132,8 +132,10 @@ async def generate_image_from_text(info : Request):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.get("/tti/{uuid}", tags=["generate"], response_class=FileResponse)
+@router.get("/tti/{uuid}/img", tags=["generate"])
 async def get_image_from_uuid(uuid: str):
+    print(uuid)
+    print(type(uuid))
     try:
         # check if uuid is valid
         # if not utils.is_valid_uuid(uuid):
@@ -142,9 +144,8 @@ async def get_image_from_uuid(uuid: str):
         
         # check if image exists
         if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
-            print('here')
             tti_logger.log(f'/tti/{uuid} :: error="Image not found"', level='warning')
-            return HTTPException(status_code=404, detail="Image not found")
+            return HTTPException(status_code=400, detail="Image not found")
         
         # return image
         tti_logger.log(f'/tti/{uuid} :: success')

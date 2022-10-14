@@ -55,6 +55,7 @@ def inference_loop():
             # generate the image from text
             pil_image = generate_image(model, prompt)
             img_path = f'{IMG_DIR_PATH}{uuid}.png'
+            print('save image to', img_path)
             # save the image
             pil_image.save(img_path)
             # save log
