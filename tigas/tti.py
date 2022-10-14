@@ -1,8 +1,8 @@
 import time
 import torch
 from PIL import Image
-import yaml
 
+# custom modules
 from api import utils
 from api.v1.generate import TTI_QUEUE, IMG_DIR_PATH, LOG_DIR_PATH
 
@@ -40,6 +40,7 @@ def convert_model_generate_img_to_pillow_img(image):
 def inference_loop():
     model = init_model()
     interval = 1
+    small_interval = 0.1
 
     inference_logger = utils.StableLogger(f'{LOG_DIR_PATH}model.log', name='inference_logger')
 
@@ -55,10 +56,11 @@ def inference_loop():
             # generate the image from text
             pil_image = generate_image(model, prompt)
             img_path = f'{IMG_DIR_PATH}{uuid}.png'
-            print('save image to', img_path)
             # save the image
             pil_image.save(img_path)
             # save log
             inference_logger.log(f'user={uuid} - generated image for "{prompt}"')
-        print('remaining requests = ',len(queue))
-        time.sleep(interval)
+        remaining_num = len(queue)
+        print('remaining requests = ',remaining_num)
+        currentInterval = small_interval if remaining_num > 0 else interval
+        time.sleep(currentInterval)

@@ -10,9 +10,8 @@ import uuid
 from PIL import Image
 import yaml
 
-
+# custom module
 from .. import utils
-
 
 
 # parse config file
@@ -40,10 +39,13 @@ if not os.path.isdir(IMG_DIR_PATH):
 if not os.path.isdir(LOG_DIR_PATH):
     os.mkdir(LOG_DIR_PATH)
 
+# FIFO queue
 TTI_QUEUE = deque(maxlen=MAX_LEN)
 
+# python logging.Logger based custom logger
 tti_logger = utils.StableLogger(f'{LOG_DIR_PATH}tti.log', name='tti_logger')
 
+# API router for /api/v1/generate
 router = APIRouter()
 
 
@@ -62,15 +64,8 @@ def from_image_to_bytes(img):
     decoded = encoded.decode('ascii')
     return decoded
 
-def convert_model_generate_img_to_pillow_img(image):
-    image = (image / 2 + 0.5).clamp(0, 1)
-    image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
-    images = (image * 255).round().astype("uint8")
-    pil_images = [Image.fromarray(image) for image in images]
-    return pil_images[0]
 
-
-@router.get("/sample", tags=["generate"], response_class=JSONResponse)
+@router.get("/sample", tags=["generate"])
 async def generate_sample_image():
     sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
@@ -98,7 +93,7 @@ async def generate_sample_image():
     
 
 
-@router.post("/tti", tags=["generate"], response_class=FileResponse)
+@router.post("/tti", tags=["generate"])
 async def generate_image_from_text(info : Request):
     try:
         req_info = await info.json()
@@ -145,7 +140,7 @@ async def get_image_from_uuid(uuid: str):
         # check if image exists
         if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
             tti_logger.log(f'/tti/{uuid} :: error="Image not found"', level='warning')
-            return HTTPException(status_code=400, detail="Image not found")
+            return HTTPException(status_code=404, detail="Image not found")
         
         # return image
         tti_logger.log(f'/tti/{uuid} :: success')
