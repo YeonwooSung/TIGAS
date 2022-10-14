@@ -110,7 +110,8 @@ async def generate_sample_image():
             sample_image = model(sample_text)
 
         # clean up the queue
-        TTI_QUEUE.remove(obj)
+        #TTI_QUEUE.remove(obj)
+        TTI_QUEUE.popleft()
 
         # convert tensor to pillow image        
         pil_image = convert_model_generate_img_to_pillow_img(sample_image)
@@ -143,9 +144,10 @@ async def generate_image_from_text(info : Request):
             # forward propagation for inference
             with torch.no_grad():
                 image = model(text)
-            
+
             # clean up the queue
-            TTI_QUEUE.remove(obj)
+            #TTI_QUEUE.remove(obj)
+            TTI_QUEUE.popleft()
 
             # convert tensor to pillow image
             pil_image = convert_model_generate_img_to_pillow_img(image)
