@@ -59,4 +59,5 @@ def inference_loop():
             pil_image.save(img_path)
             # save log
             inference_logger.info(f'user={uuid} - generated image for "{prompt}"')
+        print('remaining requests = ',len(queue))
         time.sleep(interval)
