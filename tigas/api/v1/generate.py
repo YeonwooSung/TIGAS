@@ -2,12 +2,10 @@ import base64
 from collections import deque
 from genericpath import isfile
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import FileResponse, JSONResponse
 from io import BytesIO
 import os
-import threading
-import time
-import torch
 import uuid
 from PIL import Image
 import yaml
@@ -15,12 +13,6 @@ import yaml
 
 from .. import utils
 
-
-# device = 'cuda' if torch.cuda.is_available() else 'cpu'
-# model = utils.CustomTextToImageModel(utils.ModelConfig, device, from_pretrained=False)
-# model.eval()
-
-tti_lock = threading.Lock()
 
 
 # parse config file
@@ -38,6 +30,8 @@ with open('tigas.yaml', 'r') as f:
 LOG_DIR_PATH = _LOG_DIR_PATH
 IMG_DIR_PATH = _IMG_DIR_PATH
 MAX_LEN = _MAX_SIZE
+
+EXPECTED_TIME_PER_IMG = 31
 # ------------------------------------
 
 # check if essential directories exist
@@ -76,7 +70,7 @@ def convert_model_generate_img_to_pillow_img(image):
     return pil_images[0]
 
 
-@router.get("/sample", tags=["generate"], response_class=FileResponse)
+@router.get("/sample", tags=["generate"], response_class=JSONResponse)
 async def generate_sample_image():
     sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
@@ -89,21 +83,15 @@ async def generate_sample_image():
             return HTTPException(status_code=429, detail="Too Many Requests")
         TTI_QUEUE.append(obj)
         tti_logger.log(f'/sample :: uuid="{sample_uuid}", prompt="{sample_text}"')
-        
-        # forward propagation for inference
-        with torch.no_grad():
-            sample_image = model(sample_text)
 
-        # clean up the queue
-        #TTI_QUEUE.remove(obj)
-        TTI_QUEUE.popleft()
-
-        # convert tensor to pillow image        
-        pil_image = convert_model_generate_img_to_pillow_img(sample_image)
-        img_name = f'{IMG_DIR_PATH}{str(sample_uuid)}.png'
-        tti_logger.log(f'/sample :: uuid="{sample_uuid}", img_name="{img_name}"')
-        pil_image.save(img_name)
-        return FileResponse(img_name)
+        response_obj = {
+            "uuid": sample_uuid,
+            "prompt": sample_text,
+            "queue": len(TTI_QUEUE),
+            "expected_time": len(TTI_QUEUE) * EXPECTED_TIME_PER_IMG,
+        }
+        json_compatible_item_data = jsonable_encoder(response_obj)
+        return JSONResponse(content=json_compatible_item_data)
     except Exception as e:
         tti_logger.log(f'/sample :: uuid="{sample_uuid}", error="{e}"', level='error')
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -123,30 +111,43 @@ async def generate_image_from_text(info : Request):
             if len(TTI_QUEUE) >= MAX_LEN:
                 tti_logger.log(f'Queue is full.. Block new request: prompt="{text}" uuid="{sample_uuid}"', level='warn')
                 return HTTPException(status_code=429, detail="Too Many Requests")
+            
+            # append user info to the waiting queue
             TTI_QUEUE.append(obj)
             tti_logger.log(f'/tti :: uuid="{sample_uuid}", prompt="{text}"')
 
-            # tti_lock.acquire()
-
-            # forward propagation for inference
-            with torch.no_grad():
-                image = model(text)
-
-            # clean up the queue
-            #TTI_QUEUE.remove(obj)
-            TTI_QUEUE.popleft()
-
-            # convert tensor to pillow image
-            pil_image = convert_model_generate_img_to_pillow_img(image)
-            img_name = f'{IMG_DIR_PATH}{str(sample_uuid)}.png'
-            pil_image.save(img_name)
-            tti_logger.log(f'/tti :: uuid="{sample_uuid}", img_name="{img_name}"')
-            
-            # tti_lock.release()
-            return FileResponse(img_name)
+            response_obj = {
+                "uuid": sample_uuid,
+                "prompt": text,
+                "queue": len(TTI_QUEUE),
+                "expected_time": len(TTI_QUEUE) * EXPECTED_TIME_PER_IMG,
+            }
+            json_compatible_item_data = jsonable_encoder(response_obj)
+            return JSONResponse(content=json_compatible_item_data)
         else:
             tti_logger.log(f'/tti :: error="No text in request"', level='warn')
             return HTTPException(status_code=400, detail="Need text to process text-to-image")
     except Exception as e:
         tti_logger.log(f'/tti :: uuid="{sample_uuid}", error="{e}"', level='error')
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get("/tti/{uuid}", tags=["generate"], response_class=FileResponse)
+async def get_image_from_uuid(uuid: str):
+    try:
+        # check if uuid is valid
+        # if not utils.is_valid_uuid(uuid):
+        #     tti_logger.log(f'/tti/{uuid} :: error="Invalid UUID"', level='warn')
+        #     return HTTPException(status_code=400, detail="Invalid UUID")
+        
+        # check if image exists
+        if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
+            tti_logger.log(f'/tti/{uuid} :: error="Image not found"', level='warn')
+            return HTTPException(status_code=404, detail="Image not found")
+        
+        # return image
+        tti_logger.log(f'/tti/{uuid} :: success')
+        return FileResponse(f'{IMG_DIR_PATH}{uuid}.png')
+    except Exception as e:
+        tti_logger.log(f'/tti/{uuid} :: error="{e}"', level='error')
         raise HTTPException(status_code=500, detail="Internal Server Error")
