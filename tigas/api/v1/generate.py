@@ -79,7 +79,7 @@ async def generate_sample_image():
         
         # check if queue is full
         if len(TTI_QUEUE) >= MAX_LEN:
-            tti_logger.log(f'Queue is full.. Block new request: prompt="{sample_text}" uuid="{sample_uuid}"', level='warn')
+            tti_logger.log(f'Queue is full.. Block new request: prompt="{sample_text}" uuid="{sample_uuid}"', level='warning')
             return HTTPException(status_code=429, detail="Too Many Requests")
         TTI_QUEUE.append(obj)
         tti_logger.log(f'/sample :: uuid="{sample_uuid}", prompt="{sample_text}"')
@@ -109,7 +109,7 @@ async def generate_image_from_text(info : Request):
 
             # check if queue is full
             if len(TTI_QUEUE) >= MAX_LEN:
-                tti_logger.log(f'Queue is full.. Block new request: prompt="{text}" uuid="{sample_uuid}"', level='warn')
+                tti_logger.log(f'Queue is full.. Block new request: prompt="{text}" uuid="{sample_uuid}"', level='warning')
                 return HTTPException(status_code=429, detail="Too Many Requests")
             
             # append user info to the waiting queue
@@ -125,7 +125,7 @@ async def generate_image_from_text(info : Request):
             json_compatible_item_data = jsonable_encoder(response_obj)
             return JSONResponse(content=json_compatible_item_data)
         else:
-            tti_logger.log(f'/tti :: error="No text in request"', level='warn')
+            tti_logger.log(f'/tti :: error="No text in request"', level='warning')
             return HTTPException(status_code=400, detail="Need text to process text-to-image")
     except Exception as e:
         tti_logger.log(f'/tti :: uuid="{sample_uuid}", error="{e}"', level='error')
@@ -137,12 +137,12 @@ async def get_image_from_uuid(uuid: str):
     try:
         # check if uuid is valid
         # if not utils.is_valid_uuid(uuid):
-        #     tti_logger.log(f'/tti/{uuid} :: error="Invalid UUID"', level='warn')
+        #     tti_logger.log(f'/tti/{uuid} :: error="Invalid UUID"', level='warning')
         #     return HTTPException(status_code=400, detail="Invalid UUID")
         
         # check if image exists
         if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
-            tti_logger.log(f'/tti/{uuid} :: error="Image not found"', level='warn')
+            tti_logger.log(f'/tti/{uuid} :: error="Image not found"', level='warning')
             return HTTPException(status_code=404, detail="Image not found")
         
         # return image
