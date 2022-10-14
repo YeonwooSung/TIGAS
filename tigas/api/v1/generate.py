@@ -129,8 +129,6 @@ async def generate_image_from_text(info : Request):
 
 @router.get("/tti/{uuid}/img", tags=["generate"])
 async def get_image_from_uuid(uuid: str):
-    print(uuid)
-    print(type(uuid))
     try:
         # check if uuid is valid
         # if not utils.is_valid_uuid(uuid):
@@ -147,4 +145,25 @@ async def get_image_from_uuid(uuid: str):
         return FileResponse(f'{IMG_DIR_PATH}{uuid}.png')
     except Exception as e:
         tti_logger.log(f'/tti/{uuid} :: error="{e}"', level='error')
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get("/tti/{uuid}/status", tags=["generate"])
+async def get_status_from_uuid(uuid: str):
+    try:
+        # check if uuid is valid
+        # if not utils.is_valid_uuid(uuid):
+        #     tti_logger.log(f'/tti/{uuid}/status :: error="Invalid UUID"', level='warning')
+        #     return HTTPException(status_code=400, detail="Invalid UUID")
+        
+        # check if image exists
+        if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
+            tti_logger.log(f'/tti/{uuid}/status :: error="Image not found"', level='warning')
+            return HTTPException(status_code=404, detail="Image not found")
+        
+        # return image
+        tti_logger.log(f'/tti/{uuid}/status :: exists')
+        return JSONResponse(content={"status": "ok"})
+    except Exception as e:
+        tti_logger.log(f'/tti/{uuid}/status :: error="{e}"', level='error')
         raise HTTPException(status_code=500, detail="Internal Server Error")
