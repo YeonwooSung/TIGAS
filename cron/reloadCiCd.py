@@ -24,10 +24,25 @@ def move_log_files():
     with open('tigas.yaml', 'r') as f:
         config = yaml.safe_load(f)
     log_path = config['tigas']['generate']['tti']['path']['log']
+
     dir_for_prev_logs = f'{log_path}/prev'
+    dir_for_parse_logs = f'{log_path}/parse'
+    
+    today = datetime.astimezone(datetime.now(), pytz.timezone('Asia/Seoul'))
+    time_str = today.strftime('%Y%m%d')
+    prev_tody_log_dir = f'{dir_for_prev_logs}/{time_str}'
+
     if not os.path.exists(dir_for_prev_logs):
         os.makedirs(dir_for_prev_logs)
-    os.system(f'mv {log_path}/*.log {dir_for_prev_logs}')
+    if not os.path.exists(dir_for_parse_logs):
+        os.makedirs(dir_for_parse_logs)
+    if not os.path.exists(prev_tody_log_dir):
+        os.makedirs(prev_tody_log_dir)
+
+    # copy log files to parse directory
+    os.system(f'cp {dir_for_parse_logs}/*.log {prev_tody_log_dir}')
+    # move log files to save directory
+    os.system(f'mv {prev_tody_log_dir}/*.log {dir_for_prev_logs}')
 
 # ----------------- Reload functions for pm2 -----------------
 
