@@ -127,6 +127,20 @@ async def generate_image_from_text(info : Request):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+@router.get("/tti/queue", tags=["generate"])
+async def get_size_of_waiting_queue():
+    return JSONResponse(content={"num_of_waiting": len(TTI_QUEUE)})
+
+@router.get("/tti/queue/{uuid}", tags=["generate"])
+async def get_info_of_waiting_queue(uuid: str):
+    index = 1
+    for item in TTI_QUEUE:
+        if item.uuid == uuid:
+            return JSONResponse(content={"uuid": item.uuid, "index": index})
+        index += 1
+    return HTTPException(status_code=400, detail="Not in the waiting list")
+
+
 @router.get("/tti/{uuid}/img", tags=["generate"])
 async def get_image_from_uuid(uuid: str):
     try:
