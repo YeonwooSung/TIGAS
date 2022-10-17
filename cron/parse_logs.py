@@ -35,6 +35,14 @@ def parse_logs(logs_path:str):
     config = parse_cron_config()
     targetLogs = config['targetLog']
 
+    df_config = config['dataframe']
+    df_dir_path = df_config['path']
+    df_file_name = df_config['name']
+    df_file_format = df_config['format']
+    if not os.path.exists(df_dir_path):
+        os.makedirs(df_dir_path)
+    df_path = f'{df_dir_path}/{df_file_name}.{df_file_format}'
+
     def parse_log(log_path:str):
         df = pd.DataFrame(columns=['uuid', 'prompt'])
         with open(log_path, 'r') as f:
@@ -52,13 +60,19 @@ def parse_logs(logs_path:str):
                         df = df.append({'uuid': uuid, 'prompt': prompt}, ignore_index=True)
                 except:
                     pass
-        #TODO
+        return df
 
     for log in targetLogs:
         log_path = f'{logs_path}/{log}'
         # check if log file exists
         if os.path.exists(log_path):
-            parse_log(log_path)
+            df = parse_log(log_path)
+
+            # save to csv with append mode if file exists. otherwise, create new file            
+            if os.path.exists(df_path):
+                df.to_csv(df_path, mode='a', header=False, index=False)
+            else:
+                df.to_csv(df_path, index=False)
 
 
 def cleanup_parsed_logs(logs_dir_path:str):
