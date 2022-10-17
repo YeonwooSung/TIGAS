@@ -27,7 +27,7 @@ class StableLogger:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
 
-        self.formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', "%a, %d %b %Y %H:%M:%S.%f %z")
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(self.formatter)
         self.logger.addHandler(stream_handler)
