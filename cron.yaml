@@ -20,3 +20,8 @@ cron:
         services:
           - 0
           - 3
+  
+  parseLogs:
+    interval: 2
+    targetLog:
+      - model.log
