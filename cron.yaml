@@ -3,7 +3,20 @@ cron:
     cycleInterval:
       sleep: 5
       activate: 2
+
   cleanUpNodeAssets:
     cycleInterval:
       sleep: 3
       activate: 1
+  
+  reloadCiCd:
+    alert:
+      messageTo: None
+    # cycle should be setted as one of "daily", "weekly", and "monthly"
+    cycle: weekly
+    daemon:
+      use: pm2
+      pm2:
+        services:
+          - 0
+          - 3
