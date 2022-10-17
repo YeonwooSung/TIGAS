@@ -25,3 +25,7 @@ cron:
     interval: 2
     targetLog:
       - model.log
+    dataframe:
+      format: csv
+      name: log_df
+      path: /home/ys60/logs/df/
