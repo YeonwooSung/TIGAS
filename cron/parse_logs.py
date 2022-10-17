@@ -41,7 +41,7 @@ def parse_logs(logs_path:str):
     df_file_format = df_config['format']
     if not os.path.exists(df_dir_path):
         os.makedirs(df_dir_path)
-    df_path = f'{df_dir_path}/{df_file_name}.{df_file_format}'
+    df_path = f'{df_dir_path}{df_file_name}.{df_file_format}'
 
     def parse_log(log_path:str):
         df = pd.DataFrame(columns=['uuid', 'prompt'])
@@ -76,12 +76,16 @@ def parse_logs(logs_path:str):
 
 
 def cleanup_parsed_logs(logs_dir_path:str):
-    os.remove(f'rm -rf {logs_dir_path}/*')
+    try:
+        if os.path.exists(logs_dir_path):
+            os.remove(f'rm -rf {logs_dir_path}/*')
+    except FileNotFoundError:
+        print('Nothing to cleanup - file not found')
 
 
 def main():
     log_path = get_log_path()
-    logs_dir = f'{log_path}/parse'
+    logs_dir = f'{log_path}parse'
     if not os.path.exists(logs_dir):
         os.makedirs(logs_dir)
     interval = calculate_interval()

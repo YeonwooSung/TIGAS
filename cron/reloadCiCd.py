@@ -25,8 +25,8 @@ def move_log_files():
         config = yaml.safe_load(f)
     log_path = config['tigas']['generate']['tti']['path']['log']
 
-    dir_for_prev_logs = f'{log_path}/prev'
-    dir_for_parse_logs = f'{log_path}/parse'
+    dir_for_prev_logs = f'{log_path}/prev' if log_path.endswith('/') else f'{log_path}prev'
+    dir_for_parse_logs = f'{log_path}/parse' if log_path.endswith('/') else f'{log_path}parse'
     
     today = datetime.astimezone(datetime.now(), pytz.timezone('Asia/Seoul'))
     time_str = today.strftime('%Y%m%d')
@@ -129,3 +129,7 @@ def main():
     while True:
         time.sleep(interval)
         reload_ci_cd()
+
+if __name__ == '__main__':
+    main()
+
