@@ -4,7 +4,8 @@ from PIL import Image
 
 # custom modules
 from api import utils
-from api.v1.generate import TTI_QUEUE, IMG_DIR_PATH, LOG_DIR_PATH
+from api.v1.generate import IMG_DIR_PATH, LOG_DIR_PATH
+from api.utils import TIGAS_QUEUE
 
 
 
@@ -44,7 +45,7 @@ def inference_loop():
 
     inference_logger = utils.StableLogger(f'{LOG_DIR_PATH}model.log', name='inference_logger')
 
-    queue = TTI_QUEUE
+    queue = TIGAS_QUEUE
     while True:
         # check if something is in the queue
         if len(queue) > 0:
@@ -52,6 +53,8 @@ def inference_loop():
             user_info = queue.popleft()
             uuid = user_info.uuid
             prompt = user_info.prompt
+
+            #TODO tti or i2i
 
             # generate the image from text
             pil_image = generate_image(model, prompt)

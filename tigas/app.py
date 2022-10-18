@@ -4,7 +4,7 @@ import yaml
 
 from server import Server
 from api import signin_router
-from tti import inference_loop
+from diffusion import inference_loop
 
 
 def parse_config():

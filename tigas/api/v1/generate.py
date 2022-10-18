@@ -1,5 +1,4 @@
 import base64
-from collections import deque
 from genericpath import isfile
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.encoders import jsonable_encoder
@@ -7,11 +6,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from io import BytesIO
 import os
 import uuid
-from PIL import Image
 import yaml
+
 
 # custom module
 from .. import utils
+from ..utils import append_to_queue, get_queue_len, get_object_index_by_uuid
 
 
 # parse config file
@@ -38,9 +38,6 @@ if not os.path.isdir(IMG_DIR_PATH):
     os.mkdir(IMG_DIR_PATH)
 if not os.path.isdir(LOG_DIR_PATH):
     os.mkdir(LOG_DIR_PATH)
-
-# FIFO queue
-TTI_QUEUE = deque(maxlen=MAX_LEN)
 
 # python logging.Logger based custom logger
 tti_logger = utils.StableLogger(f'{LOG_DIR_PATH}tti.log', name='tti_logger')
@@ -70,20 +67,27 @@ async def generate_sample_image():
     sample_uuid = uuid.uuid4()
     sample_text = 'Dogs running on a beach'
     try:
-        obj = utils.TTI_Form(prompt=sample_text, uuid=sample_uuid)
-        
+        obj = utils.TIGAS_Form(prompt=sample_text, uuid=sample_uuid)
+
+        len_of_queue = get_queue_len()
+
         # check if queue is full
-        if len(TTI_QUEUE) >= MAX_LEN:
+        if len_of_queue >= MAX_LEN:
             tti_logger.log(f'Queue is full.. Block new request: prompt="{sample_text}" uuid="{sample_uuid}"', level='warning')
             return HTTPException(status_code=429, detail="Too Many Requests")
-        TTI_QUEUE.append(obj)
+
+        # append to request form to the queue
+        append_to_queue(obj)
         tti_logger.log(f'/sample :: uuid="{sample_uuid}", prompt="{sample_text}"')
+
+        # update the len_of_queue since we appended the new obj
+        len_of_queue = get_queue_len()
 
         response_obj = {
             "uuid": sample_uuid,
             "prompt": sample_text,
-            "queue": len(TTI_QUEUE),
-            "expected_time": len(TTI_QUEUE) * EXPECTED_TIME_PER_IMG,
+            "queue": len_of_queue,
+            "expected_time": len_of_queue * EXPECTED_TIME_PER_IMG,
         }
         json_compatible_item_data = jsonable_encoder(response_obj)
         return JSONResponse(content=json_compatible_item_data)
@@ -100,22 +104,28 @@ async def generate_image_from_text(info : Request):
         if 'text' in req_info:
             sample_uuid = uuid.uuid4()
             text = req_info['text']
-            obj = utils.TTI_Form(prompt=text, uuid=sample_uuid)
+            obj = utils.TIGAS_Form(prompt=text, uuid=sample_uuid)
+
+            len_of_queue = get_queue_len()
 
             # check if queue is full
-            if len(TTI_QUEUE) >= MAX_LEN:
+            if len_of_queue >= MAX_LEN:
                 tti_logger.log(f'Queue is full.. Block new request: prompt="{text}" uuid="{sample_uuid}"', level='warning')
                 return HTTPException(status_code=429, detail="Too Many Requests")
             
             # append user info to the waiting queue
-            TTI_QUEUE.append(obj)
+            append_to_queue(obj)
+            # log the request
             tti_logger.log(f'/tti :: uuid="{sample_uuid}", prompt="{text}"')
+
+            # update the len_of_queue since we appended the new obj
+            len_of_queue = get_queue_len()
 
             response_obj = {
                 "uuid": sample_uuid,
                 "prompt": text,
-                "queue": len(TTI_QUEUE),
-                "expected_time": len(TTI_QUEUE) * EXPECTED_TIME_PER_IMG,
+                "queue": len_of_queue,
+                "expected_time": len_of_queue * EXPECTED_TIME_PER_IMG,
             }
             json_compatible_item_data = jsonable_encoder(response_obj)
             return JSONResponse(content=json_compatible_item_data)
@@ -129,15 +139,13 @@ async def generate_image_from_text(info : Request):
 
 @router.get("/tti/queue", tags=["generate"])
 async def get_size_of_waiting_queue():
-    return JSONResponse(content={"num_of_waiting": len(TTI_QUEUE)})
+    return JSONResponse(content={"num_of_waiting": get_queue_len()})
 
 @router.get("/tti/queue/{uuid}", tags=["generate"])
 async def get_info_of_waiting_queue(uuid: str):
-    index = 1
-    for item in TTI_QUEUE:
-        if item.uuid == uuid:
-            return JSONResponse(content={"uuid": item.uuid, "index": index})
-        index += 1
+    index = get_object_index_by_uuid()
+    if index != -1:
+        return JSONResponse(content={"uuid": uuid, "index": index})
     return HTTPException(status_code=400, detail="Not in the waiting list")
 
 
