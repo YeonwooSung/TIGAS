@@ -17,7 +17,7 @@ from ..utils import append_to_queue, get_queue_len, get_object_index_by_uuid
 with open('tigas.yaml', 'r') as f:
     config = yaml.safe_load(f)
     tti_generate_config = config['tigas']['generate']['tti']
-    _MAX_SIZE = tti_generate_config['max']
+    _MAX_SIZE = config['tigas']['generate']['max']
     path_config = tti_generate_config['path']
     _LOG_DIR_PATH = path_config['log'] if 'log' in path_config else '/home/ys60/logs/'
     _IMG_DIR_PATH = path_config['img'] if 'img' in path_config else '/home/ys60/images/'
