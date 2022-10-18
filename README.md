@@ -2,6 +2,22 @@
 
 Text to Image Generation API Server
 
+## API
+
+### /api/v1
+
+#### /generate
+
+POST request to generate an image from a text.
+
+API for the text inversion model.
+
+### /api/v2
+
+#### /generate
+
+POST request to generate an image from a text prompt and a image prompt (image to image with text guidance).
+
 ## Deploy with PM2
 
 ```bash
@@ -26,4 +42,21 @@ pm2 start cron/reloadCiCd.py --interpreter venv/bin/python
 2. Clean up expired images
 
     - Clean up expired images
+    - Cron job
+
+3. Clean up expired node asset results
+
+    - Clean up expired node asset results
+    - Cron job
+
+
+4. Parse logs
+
+    - Parse logs as a dataframe
+    - Cron job
+
+5. Reload Applications
+
+    - Reload core applications
+    - Move logs to the backup directory
     - Cron job
