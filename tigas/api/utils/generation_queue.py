@@ -29,8 +29,8 @@ def get_index_of_item(item:TIGAS_Form) -> int:
     except ValueError:
         return -1
 
-def get_object_index_by_uuid(item:TIGAS_Form) -> int:
+def get_object_index_by_uuid(uuid:str) -> int:
     for i, obj in enumerate(TIGAS_QUEUE):
-        if obj.uuid == item.uuid:
+        if obj.uuid == uuid:
             return i + 1
     return -1

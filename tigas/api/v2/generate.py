@@ -81,7 +81,10 @@ async def get_size_of_waiting_queue():
 
 @router.get("/i2i/queue/{uuid}", tags=["generate"])
 async def get_info_of_waiting_queue(uuid: str):
-    index = get_object_index_by_uuid()
+    if not utils.validate_uuid(uuid):
+        i2i_logger.log(f'/i2i/{uuid} :: error="Invalid UUID"', level='warning')
+        return HTTPException(status_code=400, detail="Bad Request :: Invalid UUID")
+    index = get_object_index_by_uuid(uuid)
     if index != -1:
         return JSONResponse(content={"uuid": uuid, "index": index})
     return HTTPException(status_code=400, detail="Not in the waiting list")
@@ -91,9 +94,9 @@ async def get_info_of_waiting_queue(uuid: str):
 async def get_image_from_uuid(uuid: str):
     try:
         # check if uuid is valid
-        # if not utils.is_valid_uuid(uuid):
-        #     i2i_logger.log(f'/i2i/{uuid} :: error="Invalid UUID"', level='warning')
-        #     return HTTPException(status_code=400, detail="Invalid UUID")
+        if not utils.validate_uuid(uuid):
+            i2i_logger.log(f'/i2i/{uuid} :: error="Invalid UUID"', level='warning')
+            return HTTPException(status_code=400, detail="Invalid UUID")
         
         # check if image exists
         if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
@@ -112,9 +115,9 @@ async def get_image_from_uuid(uuid: str):
 async def get_status_from_uuid(uuid: str):
     try:
         # check if uuid is valid
-        # if not utils.is_valid_uuid(uuid):
-        #     i2i_logger.log(f'/i2i/{uuid}/status :: error="Invalid UUID"', level='warning')
-        #     return HTTPException(status_code=400, detail="Invalid UUID")
+        if not utils.validate_uuid(uuid):
+            i2i_logger.log(f'/i2i/{uuid}/status :: error="Invalid UUID"', level='warning')
+            return HTTPException(status_code=400, detail="Invalid UUID")
         
         # check if image exists
         if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
