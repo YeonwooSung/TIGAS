@@ -190,9 +190,7 @@ class CustomTextToImageModel(nn.Module):
         init_timestep = min(init_timestep, num_inference_steps)
         timesteps = self.scheduler.timesteps[-init_timestep]
 
-        print('dtype of timesteps(1):', timesteps.dtype)
         timesteps = torch.tensor([timesteps] * batch_size * num_images_per_prompt, device=self.device)
-        print('dtype of timesteps(2):', timesteps.dtype)
         latents_dtype = text_embeddings.dtype
 
         noise = torch.randn(init_latents.shape, generator=self.generator_img2img, device=self.device, dtype=latents_dtype)
