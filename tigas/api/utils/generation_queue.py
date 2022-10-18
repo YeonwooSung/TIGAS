@@ -8,7 +8,7 @@ from .form import TIGAS_Form
 # parse config file
 with open('tigas.yaml', 'r') as f:
     config = yaml.safe_load(f)
-    _MAX_SIZE = config['tigas']['generate']['tti']['max']
+    _MAX_SIZE = config['tigas']['generate']['max']
 MAX_LEN = _MAX_SIZE
 
 # FIFO queue for image generation model
