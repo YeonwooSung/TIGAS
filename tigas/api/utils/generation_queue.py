@@ -2,7 +2,7 @@ from collections import deque
 import yaml
 
 # custom module
-from form import TIGAS_Form
+from .form import TIGAS_Form
 
 
 # parse config file

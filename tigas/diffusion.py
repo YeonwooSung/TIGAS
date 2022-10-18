@@ -5,7 +5,7 @@ from PIL import Image
 # custom modules
 from api import utils
 from api.v1.generate import IMG_DIR_PATH, LOG_DIR_PATH
-from api.utils import TIGAS_QUEUE
+from api.utils import pop_from_queue, get_queue_len
 
 
 
@@ -45,12 +45,11 @@ def inference_loop():
 
     inference_logger = utils.StableLogger(f'{LOG_DIR_PATH}model.log', name='inference_logger')
 
-    queue = TIGAS_QUEUE
     while True:
         # check if something is in the queue
-        if len(queue) > 0:
+        if get_queue_len() > 0:
             # get the first item in the queue
-            user_info = queue.popleft()
+            user_info = pop_from_queue()
             uuid = user_info.uuid
             prompt = user_info.prompt
 
@@ -63,7 +62,7 @@ def inference_loop():
             pil_image.save(img_path)
             # save log
             inference_logger.log(f'user={uuid} - generated image for "{prompt}"')
-        remaining_num = len(queue)
+        remaining_num = get_queue_len()
         print('remaining requests = ',remaining_num)
         currentInterval = small_interval if remaining_num > 0 else interval
         time.sleep(currentInterval)
