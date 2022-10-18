@@ -1,5 +1,4 @@
 import base64
-from genericpath import isfile
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse, JSONResponse
