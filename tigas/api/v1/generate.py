@@ -105,8 +105,8 @@ async def generate_image_from_text(info : Request):
             text = req_info['text']
 
             # validate text -> ascii only (no utf-8, no emoji, no special characters)
-            validate_uuid = utils.validate_uuid(text)
-            if not validate_uuid:
+            validate_prompt = utils.validate_prompt(text)
+            if not validate_prompt:
                 tti_logger.log(f'Invalid text: Non-ascii character is included: text="{text}"', level='warning')
                 return HTTPException(status_code=400, detail="Bad Request :: Prompt should be ascii only - no utf-8, no emoji, no special characters.")
 

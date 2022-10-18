@@ -53,8 +53,8 @@ async def i2i(request: Request, text: str = Form(...), image: UploadFile = Form(
         return HTTPException(status_code=429, detail='Queue is full')
 
     # validate text and image
-    validate_uuid = utils.validate_uuid(text)
-    if not validate_uuid:
+    validate_prompt = utils.validate_prompt(text)
+    if not validate_prompt:
         i2i_logger.log(f'Invalid text: Non-ascii character is included: text="{text}"', level='warning')
         return HTTPException(status_code=400, detail="Bad Request :: Prompt should be ascii only - no utf-8, no emoji, no special characters.")
 
