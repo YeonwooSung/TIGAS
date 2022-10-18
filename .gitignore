@@ -36,6 +36,8 @@ htmlcov/
 
 # vs code
 .vscode/
+.VSCodeCounter
+.VSCodeCounter/
 
 # virtualenv
 venv/
