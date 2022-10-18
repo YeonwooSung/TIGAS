@@ -50,9 +50,13 @@ async def i2i(request: Request, text: str = Form(...), image: UploadFile = Form(
     """
     # check if the queue is full
     if get_queue_len() >= MAX_LEN:
-        raise HTTPException(status_code=429, detail='Queue is full')
+        return HTTPException(status_code=429, detail='Queue is full')
 
-    #TODO validate text and image
+    # validate text and image
+    validate_uuid = utils.validate_uuid(text)
+    if not validate_uuid:
+        i2i_logger.log(f'Invalid text: Non-ascii character is included: text="{text}"', level='warning')
+        return HTTPException(status_code=400, detail="Bad Request :: Prompt should be ascii only - no utf-8, no emoji, no special characters.")
 
     # generate uuid
     uuid_str = str(uuid.uuid4())
@@ -101,7 +105,7 @@ async def get_image_from_uuid(uuid: str):
         return FileResponse(f'{IMG_DIR_PATH}{uuid}.png')
     except Exception as e:
         i2i_logger.log(f'/i2i/{uuid} :: error="{e}"', level='error')
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        return HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @router.get("/i2i/{uuid}/status", tags=["generate"])
@@ -117,9 +121,9 @@ async def get_status_from_uuid(uuid: str):
             i2i_logger.log(f'/i2i/{uuid}/status :: error="Image not found"', level='warning')
             return HTTPException(status_code=404, detail="Image not found")
         
-        # return image
+        # return ok signal
         i2i_logger.log(f'/i2i/{uuid}/status :: exists')
         return JSONResponse(content={"status": "ok"})
     except Exception as e:
         i2i_logger.log(f'/i2i/{uuid}/status :: error="{e}"', level='error')
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        return HTTPException(status_code=500, detail="Internal Server Error")

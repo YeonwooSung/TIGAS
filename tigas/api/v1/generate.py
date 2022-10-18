@@ -101,12 +101,14 @@ async def generate_image_from_text(info : Request):
     try:
         req_info = await info.json()
         if 'text' in req_info:
-
-            #TODO validate text -> ascii only (no utf-8, no emoji, no special characters)
-
             sample_uuid = uuid.uuid4()
             text = req_info['text']
-            obj = utils.TIGAS_Form(prompt=text, uuid=sample_uuid)
+
+            # validate text -> ascii only (no utf-8, no emoji, no special characters)
+            validate_uuid = utils.validate_uuid(text)
+            if not validate_uuid:
+                tti_logger.log(f'Invalid text: Non-ascii character is included: text="{text}"', level='warning')
+                return HTTPException(status_code=400, detail="Bad Request :: Prompt should be ascii only - no utf-8, no emoji, no special characters.")
 
             len_of_queue = get_queue_len()
 
@@ -114,7 +116,10 @@ async def generate_image_from_text(info : Request):
             if len_of_queue >= MAX_LEN:
                 tti_logger.log(f'Queue is full.. Block new request: prompt="{text}" uuid="{sample_uuid}"', level='warning')
                 return HTTPException(status_code=429, detail="Too Many Requests")
-            
+
+            # generate user form
+            obj = utils.TIGAS_Form(prompt=text, uuid=sample_uuid)
+
             # append user info to the waiting queue
             append_to_queue(obj)
             # log the request
