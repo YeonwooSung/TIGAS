@@ -58,6 +58,11 @@ async def i2i(request: Request, text: str = Form(...), image: UploadFile = Form(
         i2i_logger.log(f'Invalid text: Non-ascii character is included: text="{text}"', level='warning')
         return HTTPException(status_code=400, detail="Bad Request :: Prompt should be ascii only - no utf-8, no emoji, no special characters.")
 
+    # validate image
+    if image.content_type not in ['image/png', 'image/jpeg', 'image/jpg']:
+        i2i_logger.log(f'Invalid image: image type is not supported: image="{image.filename}"', level='warning')
+        return HTTPException(status_code=400, detail="Bad Request :: Image type is not supported.")
+
     # generate uuid
     uuid_str = str(uuid.uuid4())
 
