@@ -19,7 +19,7 @@ def init_model():
     return model
 
 
-def generate_image(model, text):
+def generate_image(model, text, text_inversion:bool=True, image:Image=None):
     '''
     Generates an image from the given text.
     '''
@@ -52,16 +52,38 @@ def inference_loop():
             user_info = pop_from_queue()
             uuid = user_info.uuid
             prompt = user_info.prompt
+            task_type = user_info.type
 
-            #TODO tti or i2i
+            # Text Inversion
+            if task_type == 'tti':
+                # generate the image from text
+                pil_image = generate_image(model, prompt)
+                img_path = f'{IMG_DIR_PATH}{uuid}.png'
+                # save the image
+                pil_image.save(img_path)
+                # save log
+                inference_logger.log(f'user={uuid} - generated image for "{prompt}"')
 
-            # generate the image from text
-            pil_image = generate_image(model, prompt)
-            img_path = f'{IMG_DIR_PATH}{uuid}.png'
-            # save the image
-            pil_image.save(img_path)
-            # save log
-            inference_logger.log(f'user={uuid} - generated image for "{prompt}"')
+            # Prompt guided image to image
+            elif task_type == 'i2i':
+                img = user_info.get_image()
+
+                # img is None if either file path is not given or the file does not exist
+                if img != None:
+                    # generate image for img2img task
+                    pil_image = generate_image(model, prompt, text_inversion=False, image=img)
+                    img_path = f'{IMG_DIR_PATH}{uuid}.png'
+                    # save the image
+                    pil_image.save(img_path)
+                    # save log
+                    inference_logger.log(f'user={uuid} - generated image for "{prompt}"')
+                else:
+                    inference_logger.log(f'user={uuid} - image not found')
+
+            # invalid task type
+            else:
+                inference_logger.log(f'unknown task type: {task_type}')
+
         remaining_num = get_queue_len()
         print('remaining requests = ',remaining_num)
         currentInterval = small_interval if remaining_num > 0 else interval
