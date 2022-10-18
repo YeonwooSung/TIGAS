@@ -51,7 +51,7 @@ async def i2i(request: Request, text: str = Form(...), image: bytes = Form(...))
     #TODO ??
     # check if the queue is full
     if get_queue_len() >= MAX_LEN:
-        raise HTTPException(status_code=503, detail='Queue is full')
+        raise HTTPException(status_code=429, detail='Queue is full')
 
     # generate uuid
     uuid_str = str(uuid.uuid4())
