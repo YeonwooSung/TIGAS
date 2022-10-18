@@ -6,6 +6,9 @@ import numpy as np
 from PIL import Image
 import yaml
 
+# import custom modules
+from .wrappers import private
+
 
 def preprocess(image):
     '''
@@ -109,6 +112,7 @@ class CustomTextToImageModel(nn.Module):
                 raise ValueError("Please provide either an image or an image path")
 
 
+    @private
     def forward_prompt_guided_style_transfer(self, prompt:str, img:Image):
         latents = self.setup_scheduler_img2img(img)
         latents = latents.to(self.device)
@@ -119,6 +123,7 @@ class CustomTextToImageModel(nn.Module):
         return image
 
 
+    @private
     def forward_text_inversion(self, prompt):
         latents = self.setup_scheduler()
         latents = latents.to(self.device)
@@ -129,6 +134,7 @@ class CustomTextToImageModel(nn.Module):
         return image
 
 
+    @private
     def embed_prompts(self, prompt):
         text_embeddings, max_length = self.tokenize_and_embed_input_text(prompt, self.clip_tokenizer.model_max_length)
         uncond_embeddings, _ = self.tokenize_and_embed_input_text(self.uncond_input, max_length, truncation=False)
@@ -138,6 +144,7 @@ class CustomTextToImageModel(nn.Module):
         text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
         return text_embeddings
     
+    @private
     def tokenize_and_embed_input_text(self, text, max_len, truncation=True):
         tokenized_texts = self.clip_tokenizer(text, padding="max_length", max_length=max_len, truncation=truncation, return_tensors="pt")
         text_embeddings = self.clip_model(tokenized_texts.input_ids.to(self.device))[0]
@@ -145,6 +152,7 @@ class CustomTextToImageModel(nn.Module):
         return text_embeddings, max_length
 
 
+    @private
     def generate_latent_vector_with_unet(self, text_embeddings, latents):
         if self.device == 'cuda':
             with autocast('cuda'):
@@ -152,6 +160,7 @@ class CustomTextToImageModel(nn.Module):
         else:
             return self.run_denoising_loop(text_embeddings, latents)
 
+    @private
     def generate_latent_vector_with_unet_img2img(self, text_embeddings, latents):
         if self.device == 'cuda':
             with autocast('cuda'):
@@ -160,6 +169,7 @@ class CustomTextToImageModel(nn.Module):
             return self.run_denoising_loop_img2img(text_embeddings, latents)
 
 
+    @private
     def run_denoising_loop(self, text_embeddings, latents):
         scheduler = self.scheduler
         for i, t in enumerate(scheduler.timesteps):
@@ -180,6 +190,7 @@ class CustomTextToImageModel(nn.Module):
         return latents
 
     
+    @private
     def run_denoising_loop_img2img(self, text_embeddings, init_latents):
         num_inference_steps = self.num_inference_steps
         strength = 0.8#TODO
@@ -223,6 +234,7 @@ class CustomTextToImageModel(nn.Module):
         return latents
 
 
+    @private
     def setup_scheduler(self) -> torch.Tensor:
         '''
         Setup the diffusion scheduler for text inversion
@@ -239,6 +251,7 @@ class CustomTextToImageModel(nn.Module):
         return latents * self.scheduler.sigmas[0]
 
 
+    @private
     def setup_scheduler_img2img(self, img:Image) -> torch.Tensor:
         '''
         Setup the diffusion scheduler for image to image task.
