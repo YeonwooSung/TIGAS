@@ -6,6 +6,8 @@ tigas:
     - v1
     - v2
   name: tigas
+  reload: False
+  debug: False
   
   generate:
     max: 10
