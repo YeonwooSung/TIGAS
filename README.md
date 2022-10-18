@@ -6,6 +6,14 @@ Text to Image Generation API Server
 
 ```bash
 pm2 start tigas/app.py --interpreter venv/bin/python
+
+pm2 start cron/delete_old_files.py --interpreter venv/bin/python
+
+pm2 start cron/cleanup_node_asset_results.py --interpreter venv/bin/python
+
+pm2 start cron/parse_logs.py --interpreter venv/bin/python
+
+pm2 start cron/reloadCiCd.py --interpreter venv/bin/python
 ```
 
 ## Processes
