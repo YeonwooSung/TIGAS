@@ -48,3 +48,7 @@ model
 # sample output
 sample.png
 */sample.png
+
+# testing outputs
+logs/
+images/
