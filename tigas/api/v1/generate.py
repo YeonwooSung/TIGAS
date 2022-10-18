@@ -101,6 +101,9 @@ async def generate_image_from_text(info : Request):
     try:
         req_info = await info.json()
         if 'text' in req_info:
+
+            #TODO validate text -> ascii only (no utf-8, no emoji, no special characters)
+
             sample_uuid = uuid.uuid4()
             text = req_info['text']
             obj = utils.TIGAS_Form(prompt=text, uuid=sample_uuid)
@@ -151,7 +154,7 @@ async def get_info_of_waiting_queue(uuid: str):
 @router.get("/tti/{uuid}/img", tags=["generate"])
 async def get_image_from_uuid(uuid: str):
     try:
-        # check if uuid is valid
+        # TODO check if uuid is valid
         # if not utils.is_valid_uuid(uuid):
         #     tti_logger.log(f'/tti/{uuid} :: error="Invalid UUID"', level='warning')
         #     return HTTPException(status_code=400, detail="Invalid UUID")
@@ -172,7 +175,7 @@ async def get_image_from_uuid(uuid: str):
 @router.get("/tti/{uuid}/status", tags=["generate"])
 async def get_status_from_uuid(uuid: str):
     try:
-        # check if uuid is valid
+        # TODO check if uuid is valid
         # if not utils.is_valid_uuid(uuid):
         #     tti_logger.log(f'/tti/{uuid}/status :: error="Invalid UUID"', level='warning')
         #     return HTTPException(status_code=400, detail="Invalid UUID")
