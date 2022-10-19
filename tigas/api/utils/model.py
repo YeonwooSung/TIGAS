@@ -201,8 +201,8 @@ class CustomTextToImageModel(nn.Module):
 
     
     def run_denoising_loop_img2img(self, text_embeddings, init_latents):
-        num_inference_steps = self.num_inference_steps
-        strength = 0.6#TODO
+        num_inference_steps = 50 #TODO self.num_inference_steps
+        strength = 0.6 #TODO
         batch_size, num_images_per_prompt = 1, 1
 
         # initialize the timesteps
@@ -271,7 +271,7 @@ class CustomTextToImageModel(nn.Module):
         @param img: PIL image (prompt image)
         '''
         self.num_inference_steps = self.config.num_inference_steps
-        self.scheduler.set_timesteps(self.num_inference_steps)
+        self.scheduler.set_timesteps(50)
         
         # preprocess the given image (resize, resample, and convert to tensor)
         img = preprocess(img)
