@@ -76,7 +76,7 @@ def inference_loop():
                     # save the image
                     pil_image.save(img_path)
                     # save log
-                    inference_logger.log(f'user={uuid} - generated image for "{prompt}"')
+                    inference_logger.log(f'user={uuid} - image conversion with guidance prompt: "{prompt}"')
                 else:
                     inference_logger.log(f'user={uuid} - image not found')
 
