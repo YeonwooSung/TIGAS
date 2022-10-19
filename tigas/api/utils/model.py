@@ -18,11 +18,13 @@ def preprocess(image):
     4) convert to tensor
     '''
     w, h = image.size
+    if w > h:
+        image = image.resize((512, 500))
+    elif h > w:
+        image = image.resize((500, 512))
+    else:
+        image = image.resize((512,512))
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
-    if w > 512:
-        w = 512
-    if h > 512:
-        h = 512
     image = image.resize((w, h), resample=Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
@@ -91,6 +93,12 @@ class CustomTextToImageModel(nn.Module):
             self.unet_model = UNet2DConditionModel.from_pretrained(UNET_MODEL_PATH).to(device)
             self.kl_model = AutoencoderKL.from_pretrained(VAE_MODEL_PATH).to(device)
 
+        # eval mode
+        self.clip_model.eval()
+        self.unet_model.eval()
+        self.kl_model.eval()
+
+
         # generate UNet scheduler
         self.scheduler = LMSDiscreteScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000)
 
@@ -157,15 +165,17 @@ class CustomTextToImageModel(nn.Module):
     def generate_latent_vector_with_unet(self, text_embeddings, latents):
         if self.device == 'cuda':
             with autocast('cuda'):
-                return self.run_denoising_loop(text_embeddings, latents)
+                with torch.no_grad():
+                    return self.run_denoising_loop(text_embeddings, latents)
         else:
             return self.run_denoising_loop(text_embeddings, latents)
 
     
     def generate_latent_vector_with_unet_img2img(self, text_embeddings, latents):
         if self.device == 'cuda':
-            with autocast('cuda'):
-                return self.run_denoising_loop_img2img(text_embeddings, latents)
+                with autocast('cuda'):
+                    with torch.no_grad():
+                        return self.run_denoising_loop_img2img(text_embeddings, latents)
         else:
             return self.run_denoising_loop_img2img(text_embeddings, latents)
 
@@ -221,8 +231,9 @@ class CustomTextToImageModel(nn.Module):
             
             latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
-            # predict the noise residual
-            noise_pred = self.unet_model(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
+            with torch.no_grad():
+                # predict the noise residual
+                noise_pred = self.unet_model(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
             
             # perform guidance
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
@@ -295,5 +306,5 @@ def run_model_test_for_text_inversion():
     pil_images[0].save('sample.png')
 
 
-if __name__ == '__main__':
-    run_model_test_for_text_inversion()
+#if __name__ == '__main__':
+    #run_model_test_for_text_inversion()

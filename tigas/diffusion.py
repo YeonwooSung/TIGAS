@@ -23,6 +23,7 @@ def generate_image(model, text, text_inversion:bool=True, image:Image=None):
     '''
     Generates an image from the given text.
     '''
+    print('here')
     with torch.no_grad():
         image = model(text, use_text_inversion=text_inversion, img=image)
     # convert tensor to pillow image
@@ -39,6 +40,7 @@ def convert_model_generate_img_to_pillow_img(image):
 
 
 def inference_loop():
+    torch.cuda.empty_cache()
     model = init_model()
     interval = 1
     small_interval = 0.1
@@ -84,6 +86,7 @@ def inference_loop():
             else:
                 inference_logger.log(f'unknown task type: {task_type}')
 
+        torch.cuda.empty_cache()
         remaining_num = get_queue_len()
         print('remaining requests = ',remaining_num)
         currentInterval = small_interval if remaining_num > 0 else interval
