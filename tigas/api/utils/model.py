@@ -5,6 +5,7 @@ from diffusers import AutoencoderKL, UNet2DConditionModel, LMSDiscreteScheduler
 import numpy as np
 from PIL import Image
 import yaml
+import gc
 
 
 
@@ -18,12 +19,10 @@ def preprocess(image):
     4) convert to tensor
     '''
     w, h = image.size
-    # if w > h:
-    #     image = image.resize((512, 500))
-    # elif h > w:
-    #     image = image.resize((500, 512))
-    # else:
-    #     image = image.resize((512,512))
+    if w > 512:
+        w = 512
+    if h > 512:
+        h = 512
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
     image = image.resize((w, h), resample=Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
@@ -93,11 +92,6 @@ class CustomTextToImageModel(nn.Module):
             self.unet_model = UNet2DConditionModel.from_pretrained(UNET_MODEL_PATH).to(device)
             self.kl_model = AutoencoderKL.from_pretrained(VAE_MODEL_PATH).to(device)
 
-        # eval mode
-        self.clip_model.eval()
-        self.unet_model.eval()
-        self.kl_model.eval()
-
 
         # generate UNet scheduler
         self.scheduler = LMSDiscreteScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000)
@@ -126,13 +120,14 @@ class CustomTextToImageModel(nn.Module):
 
 
     def forward_prompt_guided_style_transfer(self, prompt:str, img:Image):
-        latents = self.setup_scheduler_img2img(img)
-        latents = latents.to(self.device)
-        text_embeddings = self.embed_prompts(prompt)
-        latents = self.generate_latent_vector_with_unet_img2img(text_embeddings, latents)
-        latents = self.latent_scaling_factor * latents
-        image = self.kl_model.decode(latents).sample
-        return image
+        with torch.no_grad():
+            latents = self.setup_scheduler_img2img(img)
+            #latents = latents.to(self.device)
+            text_embeddings = self.embed_prompts(prompt)
+            latents = self.generate_latent_vector_with_unet_img2img(text_embeddings, latents)
+            latents = self.latent_scaling_factor * latents
+            image = self.kl_model.decode(latents).sample
+            return image
 
 
     def forward_text_inversion(self, prompt):
@@ -223,24 +218,27 @@ class CustomTextToImageModel(nn.Module):
         # It's more optimized to move all timesteps to correct device beforehand
         timesteps = self.scheduler.timesteps[t_start:].to(self.device)
 
+        gc.collect()
+        torch.cuda.empty_cache()
+
         # for i, t in enumerate(self.scheduler.timesteps):
         for i, t in enumerate(timesteps):
-            # print(latents.shape)
-            # expand the latents if we are doing classifier free guidance
-            latent_model_input = torch.cat([latents] * 2)
-            
-            latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
-
+            print(latents.shape)
             with torch.no_grad():
+                # expand the latents if we are doing classifier free guidance
+                latent_model_input = torch.cat([latents] * 2)
+            
+                latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
+
                 # predict the noise residual
                 noise_pred = self.unet_model(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
             
-            # perform guidance
-            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-            noise_pred = noise_pred_uncond + self.config.guidance_scale * (noise_pred_text - noise_pred_uncond)
+                # perform guidance
+                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + self.config.guidance_scale * (noise_pred_text - noise_pred_uncond)
 
-            # compute the previous noisy sample x_t -> x_t-1
-            latents = self.scheduler.step(noise_pred, t, latents).prev_sample
+                # compute the previous noisy sample x_t -> x_t-1
+                latents = self.scheduler.step(noise_pred, t, latents).prev_sample
         return latents
 
 
@@ -277,8 +275,9 @@ class CustomTextToImageModel(nn.Module):
         img = preprocess(img)
         img = img.to(device=self.device)
         
-        # encode the image with the VAE
-        latent_dist = self.kl_model.encode(img).latent_dist
+        with torch.no_grad():
+            # encode the image with the VAE
+            latent_dist = self.kl_model.encode(img).latent_dist
 
         # sample from the latent distribution
         init_latents = latent_dist.sample(generator=self.generator_img2img)
