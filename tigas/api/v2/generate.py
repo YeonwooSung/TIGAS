@@ -78,9 +78,10 @@ async def i2i(request: Request, text: str = Form(...), image: UploadFile = Form(
     # append to queue
     obj = utils.TIGAS_Form(prompt=text, uuid=uuid_str, type='i2i', img_path=img_path)
     append_to_queue(obj)
+    queue_len = get_queue_len()
 
-    # return uuid
-    return {'uuid': uuid_str}
+    # return uuid and expected time
+    return {'uuid': uuid_str, "expected_time": EXPECTED_TIME_PER_IMG * queue_len}
 
 
 @router.get("/i2i/queue", tags=["generate"])
