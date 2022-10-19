@@ -63,17 +63,20 @@ async def i2i(request: Request, text: str = Form(...), image: UploadFile = Form(
         i2i_logger.log(f'Invalid image: image type is not supported: image="{image.filename}"', level='warning')
         return HTTPException(status_code=400, detail="Bad Request :: Image type is not supported.")
 
+    # get image file extension
+    ext = image.filename.split('.')[-1]
+
     # generate uuid
     uuid_str = str(uuid.uuid4())
 
     contents = await image.read()
     # save image
-    img_path = f'{IMG_DIR_PATH}{uuid_str}_u.png'
+    img_path = f'{IMG_DIR_PATH}{uuid_str}_user_upload.{ext}'
     with open(img_path, 'wb') as f:
         f.write(contents)
 
     # append to queue
-    obj = utils.TIGAS_Form(prompt=text, uuid=uuid_str, type='i2i')
+    obj = utils.TIGAS_Form(prompt=text, uuid=uuid_str, type='i2i', img_path=img_path)
     append_to_queue(obj)
 
     # return uuid
