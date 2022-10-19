@@ -24,7 +24,7 @@ def generate_image(model, text, text_inversion:bool=True, image:Image=None):
     Generates an image from the given text.
     '''
     with torch.no_grad():
-        image = model(text)
+        image = model(text, use_text_inversion=text_inversion, img=image)
     # convert tensor to pillow image
     pil_image = convert_model_generate_img_to_pillow_img(image)
     return pil_image
