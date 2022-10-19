@@ -18,12 +18,12 @@ def preprocess(image):
     4) convert to tensor
     '''
     w, h = image.size
-    if w > h:
-        image = image.resize((512, 500))
-    elif h > w:
-        image = image.resize((500, 512))
-    else:
-        image = image.resize((512,512))
+    # if w > h:
+    #     image = image.resize((512, 500))
+    # elif h > w:
+    #     image = image.resize((500, 512))
+    # else:
+    #     image = image.resize((512,512))
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
     image = image.resize((w, h), resample=Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
