@@ -21,6 +21,10 @@ def preprocess(image):
     '''
     w, h = image.size
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
+    if w > 512:
+        w = 512
+    if h > 512:
+        h = 512
     image = image.resize((w, h), resample=Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
@@ -98,16 +102,19 @@ class CustomTextToImageModel(nn.Module):
 
     def forward(self, prompt:str, use_text_inversion:bool=True, img:Image=None, img_path:str=None):
         if use_text_inversion:
-            return self.forward_text_inversion(prompt)
+            with torch.no_grad():
+                return self.forward_text_inversion(prompt)
         else:
             if img:
-                return self.forward_prompt_guided_style_transfer(prompt, img)
+                with torch.no_grad():
+                    return self.forward_prompt_guided_style_transfer(prompt, img)
             elif img_path:
                 # use "convert("RGB")" to convert to RGB if image is not RGB such as RGBA or CMYK
                 img = Image.open(img_path).convert("RGB")
                 # resize image to match model input size
                 img = img.resize((512, 512))
-                return self.forward_prompt_guided_style_transfer(prompt, img)
+                with torch.no_grad():
+                    return self.forward_prompt_guided_style_transfer(prompt, img)
             else:
                 raise ValueError("Please provide either an image or an image path")
 
