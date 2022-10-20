@@ -80,6 +80,9 @@ async def i2i(request: Request, text: str = Form(...), image: UploadFile = Form(
     append_to_queue(obj)
     queue_len = get_queue_len()
 
+    # register uuid with prompt to the redis server
+    utils.register_uuid_with_prompt(text, uuid_str, service='i2i')
+
     # return uuid and expected time
     return {'uuid': uuid_str, "expected_time": EXPECTED_TIME_PER_IMG * queue_len}
 
@@ -108,13 +111,21 @@ async def get_image_from_uuid(uuid: str):
             return HTTPException(status_code=400, detail="Invalid UUID")
         
         # check if image exists
-        if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
-            i2i_logger.log(f'/i2i/{uuid} :: error="Image not found"', level='warning')
-            return HTTPException(status_code=404, detail="Image not found")
-        
-        # return image
-        i2i_logger.log(f'/i2i/{uuid} :: success')
-        return FileResponse(f'{IMG_DIR_PATH}{uuid}.png')
+        status = utils.get_status(uuid)
+
+        # if status is 'done', return image
+        if status == 1:
+            if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
+                i2i_logger.log(f'/i2i/{uuid} :: error="Image file not found"', level='warning')
+                return HTTPException(status_code=404, detail="Image file not found")
+            i2i_logger.log(f'/i2i/{uuid} :: success')
+            return FileResponse(f'{IMG_DIR_PATH}{uuid}.png')
+
+        # if status is 'error', return error message
+        elif status == -1:
+            i2i_logger.log(f'/i2i/{uuid} :: error="status=-1"', level='error')
+            return HTTPException(status_code=500, detail="Error occurred while generating image")
+        return HTTPException(status_code=404, detail="Image not found")
     except Exception as e:
         i2i_logger.log(f'/i2i/{uuid} :: error="{e}"', level='error')
         return HTTPException(status_code=500, detail="Internal Server Error")
@@ -129,13 +140,20 @@ async def get_status_from_uuid(uuid: str):
             return HTTPException(status_code=400, detail="Invalid UUID")
         
         # check if image exists
-        if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
-            i2i_logger.log(f'/i2i/{uuid}/status :: error="Image not found"', level='warning')
-            return HTTPException(status_code=404, detail="Image not found")
+        status = utils.get_status(uuid)
+
+        # if status is 'done', return image
+        if status == 1:
+            i2i_logger.log(f'/i2i/{uuid}/status :: success')
+            return JSONResponse(content={"status": "done"})
         
-        # return ok signal
-        i2i_logger.log(f'/i2i/{uuid}/status :: exists')
-        return JSONResponse(content={"status": "ok"})
+        # if status is 'error', return error message
+        elif status == -1:
+            i2i_logger.log(f'/i2i/{uuid}/status :: error="status=-1"', level='error')
+            return HTTPException(status_code=500, detail="Error occurred while generating image")
+        
+        i2i_logger.log(f'/i2i/{uuid}/status :: pending', level='debug')
+        return HTTPException(status_code=400, detail="Status pending")
     except Exception as e:
         i2i_logger.log(f'/i2i/{uuid}/status :: error="{e}"', level='error')
         return HTTPException(status_code=500, detail="Internal Server Error")
