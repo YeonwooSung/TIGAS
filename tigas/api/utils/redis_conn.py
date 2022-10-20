@@ -1,4 +1,5 @@
 import redis
+import json
 
 
 SERVICE_LIST = ['tti', 'i2i']
@@ -64,13 +65,35 @@ def register_uuid_with_prompt(prompt:str, uuid:str, service:str='tti'):
         'service': service,
         'status': 'pending',
     }
-    client.set(uuid, data)
+    data_str = json.dumps(data)
+    client.set(uuid, data_str)
     client.close()
+
+
+def get_service_info_by_uuid(uuid:str):
+    client = RedisClient()
+    data_str = client.get(uuid)
+    client.close()
+    data = json.loads(data_str)
+    if data is not None and 'service' in data:
+        return data['service']
+    return None
 
 
 if __name__ == '__main__':
     import uuid
     prompt = 'This is a test prompt'
     test_uuid = str(uuid.uuid4())
+    test_uuid2 = str(uuid.uuid4())
     register_uuid_with_prompt(prompt, test_uuid)
-    register_uuid_with_prompt(prompt, test_uuid, service='i2i')
+    register_uuid_with_prompt(prompt, test_uuid2, service='i2i')
+    service1 = get_service_info_by_uuid(test_uuid)
+    service2 = get_service_info_by_uuid(test_uuid2)
+
+    print(f'{test_uuid} is waiting for {service1} service')
+    print(f'{test_uuid2} is waiting for {service2} service')
+
+    test_cli = RedisClient()
+    ret = test_cli.get('test_none')
+    print(ret)
+
