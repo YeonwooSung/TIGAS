@@ -1,5 +1,6 @@
 import time
 import torch
+import gc
 from PIL import Image
 
 # custom modules
@@ -38,7 +39,7 @@ def convert_model_generate_img_to_pillow_img(image):
     return pil_images[0]
 
 
-def inference_loop():
+def diffusion_loop():
     torch.cuda.empty_cache()
     model = init_model()
     model.eval()
@@ -103,3 +104,26 @@ def inference_loop():
         print('remaining requests = ',remaining_num)
         currentInterval = small_interval if remaining_num > 0 else interval
         time.sleep(currentInterval)
+
+
+def inference_loop():
+    try:
+        diffusion_loop()
+    except Exception as e:
+        if e == KeyboardInterrupt:
+            print('KeyboardInterrupt')
+            exit(0)
+        print(e)
+        gc.collect()
+        torch.cuda.empty_cache()
+        time.sleep(2)
+        gc.collect()
+        torch.cuda.empty_cache()
+        time.sleep(2)
+        gc.collect()
+        torch.cuda.empty_cache()
+        time.sleep(2)
+        gc.collect()
+        torch.cuda.empty_cache()
+        print('Restarting the diffusion loop...')
+        inference_loop()
