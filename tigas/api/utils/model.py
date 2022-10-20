@@ -8,22 +8,59 @@ import yaml
 import gc
 
 
+MAX_SIZE = 512
+HALF_SIZE = 256
+RESIZE_MULTIPLIER = 32
+
+W_H_RATIO_THRESHOLD = 1.0
+CROP_THRESHOLD = 0.15
+
+
+def crop_image(image:Image):
+    '''
+    Crops the image to the given coordinates.
+    '''
+    w, h = image.size
+    left = int(w / 2) - HALF_SIZE
+    top = int(h / 2) - HALF_SIZE
+    right = left + MAX_SIZE
+    bottom = top + MAX_SIZE
+    return image.crop((left, top, right, bottom))
+
+def resize_and_crop(image:Image):
+    '''
+    Resizes and crops the image to the shortest side to be 512, and crops the middle of the longer side to ensure as larger side as possible.
+    '''
+    w, h = image.size
+    pct_change = abs(w / h - W_H_RATIO_THRESHOLD)
+    if pct_change > CROP_THRESHOLD:
+        # resize and crop
+        if w > h:
+            # resize to 512 height
+            image = image.resize((int(w * MAX_SIZE / h), MAX_SIZE))
+            # crop the middle of the width
+            image = crop_image(image)
+        else:
+            # resize to 512 width
+            image = image.resize((MAX_SIZE, int(h * MAX_SIZE / w)))
+            # crop the middle of the height
+            image = crop_image(image)
+    else:
+        return image.resize((MAX_SIZE, MAX_SIZE))
+
 
 def preprocess(image):
     '''
     Preprocesses the image to be fed into the model.
 
-    1) resize to integer multiple of 32
-    2) use Lanczos algorithm to sampling the most useful pixels
+    1) resize and crop
+    2) resampling by Lanczos algorithm to sampling the most useful pixels
     3) reshape the image
     4) convert to tensor
     '''
-    w, h = image.size
-    if w > 512:
-        w = 512
-    if h > 512:
-        h = 512
-    w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
+    image = resize_and_crop(image)
+
+    w, h = map(lambda x: x - x % RESIZE_MULTIPLIER, (w, h))  # resize to integer multiple of 32
     image = image.resize((w, h), resample=Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
@@ -102,32 +139,28 @@ class CustomTextToImageModel(nn.Module):
 
     def forward(self, prompt:str, use_text_inversion:bool=True, img:Image=None, img_path:str=None):
         if use_text_inversion:
-            with torch.no_grad():
-                return self.forward_text_inversion(prompt)
+            return self.forward_text_inversion(prompt)
         else:
             if img:
-                with torch.no_grad():
-                    return self.forward_prompt_guided_style_transfer(prompt, img)
+                return self.forward_prompt_guided_style_transfer(prompt, img)
             elif img_path:
                 # use "convert("RGB")" to convert to RGB if image is not RGB such as RGBA or CMYK
                 img = Image.open(img_path).convert("RGB")
                 # resize image to match model input size
-                img = img.resize((512, 512))
-                with torch.no_grad():
-                    return self.forward_prompt_guided_style_transfer(prompt, img)
+                img = img.resize((MAX_SIZE, MAX_SIZE))
+                return self.forward_prompt_guided_style_transfer(prompt, img)
             else:
                 raise ValueError("Please provide either an image or an image path")
 
 
     def forward_prompt_guided_style_transfer(self, prompt:str, img:Image):
-        with torch.no_grad():
-            latents = self.setup_scheduler_img2img(img)
-            #latents = latents.to(self.device)
-            text_embeddings = self.embed_prompts(prompt)
-            latents = self.generate_latent_vector_with_unet_img2img(text_embeddings, latents)
-            latents = self.latent_scaling_factor * latents
-            image = self.kl_model.decode(latents).sample
-            return image
+        latents = self.setup_scheduler_img2img(img)
+        #latents = latents.to(self.device)
+        text_embeddings = self.embed_prompts(prompt)
+        latents = self.generate_latent_vector_with_unet_img2img(text_embeddings, latents)
+        latents = self.latent_scaling_factor * latents
+        image = self.kl_model.decode(latents).sample
+        return image
 
 
     def forward_text_inversion(self, prompt):
@@ -160,8 +193,7 @@ class CustomTextToImageModel(nn.Module):
     def generate_latent_vector_with_unet(self, text_embeddings, latents):
         if self.device == 'cuda':
             with autocast('cuda'):
-                with torch.no_grad():
-                    return self.run_denoising_loop(text_embeddings, latents)
+                return self.run_denoising_loop(text_embeddings, latents)
         else:
             return self.run_denoising_loop(text_embeddings, latents)
 
@@ -169,8 +201,7 @@ class CustomTextToImageModel(nn.Module):
     def generate_latent_vector_with_unet_img2img(self, text_embeddings, latents):
         if self.device == 'cuda':
                 with autocast('cuda'):
-                    with torch.no_grad():
-                        return self.run_denoising_loop_img2img(text_embeddings, latents)
+                    return self.run_denoising_loop_img2img(text_embeddings, latents)
         else:
             return self.run_denoising_loop_img2img(text_embeddings, latents)
 
@@ -224,21 +255,20 @@ class CustomTextToImageModel(nn.Module):
         # for i, t in enumerate(self.scheduler.timesteps):
         for i, t in enumerate(timesteps):
             print(latents.shape)
-            with torch.no_grad():
-                # expand the latents if we are doing classifier free guidance
-                latent_model_input = torch.cat([latents] * 2)
-            
-                latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
+            # expand the latents if we are doing classifier free guidance
+            latent_model_input = torch.cat([latents] * 2)
+        
+            latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
-                # predict the noise residual
-                noise_pred = self.unet_model(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
-            
-                # perform guidance
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + self.config.guidance_scale * (noise_pred_text - noise_pred_uncond)
+            # predict the noise residual
+            noise_pred = self.unet_model(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
+        
+            # perform guidance
+            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+            noise_pred = noise_pred_uncond + self.config.guidance_scale * (noise_pred_text - noise_pred_uncond)
 
-                # compute the previous noisy sample x_t -> x_t-1
-                latents = self.scheduler.step(noise_pred, t, latents).prev_sample
+            # compute the previous noisy sample x_t -> x_t-1
+            latents = self.scheduler.step(noise_pred, t, latents).prev_sample
         return latents
 
 
@@ -275,9 +305,8 @@ class CustomTextToImageModel(nn.Module):
         img = preprocess(img)
         img = img.to(device=self.device)
         
-        with torch.no_grad():
-            # encode the image with the VAE
-            latent_dist = self.kl_model.encode(img).latent_dist
+        # encode the image with the VAE
+        latent_dist = self.kl_model.encode(img).latent_dist
 
         # sample from the latent distribution
         init_latents = latent_dist.sample(generator=self.generator_img2img)
@@ -305,5 +334,5 @@ def run_model_test_for_text_inversion():
     pil_images[0].save('sample.png')
 
 
-#if __name__ == '__main__':
-    #run_model_test_for_text_inversion()
+if __name__ == '__main__':
+    run_model_test_for_text_inversion()
