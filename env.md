@@ -38,5 +38,15 @@ If you are already super user, then you can replace the sudo command.
 To activate the redis server, run the following command:
 
 ```bash
+# enable the redis service when reboot the server
 sudo systemctl enable redis-server --now
+
+# start redis-server
+sudo systemctl start redis-server
+
+# check the redis-server status
+sudo systemctl status redis-server -l
+
+# stop redis server
+sudo systemctl stop redis-server
 ```

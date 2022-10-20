@@ -5,7 +5,7 @@ from PIL import Image
 # custom modules
 from api import utils
 from api.v1.generate import IMG_DIR_PATH, LOG_DIR_PATH
-from api.utils import pop_from_queue, get_queue_len
+from api.utils import pop_from_queue, get_queue_len, update_user_status_ok, update_user_status_error
 
 
 
@@ -66,6 +66,9 @@ def inference_loop():
                 # save log
                 inference_logger.log(f'user={uuid} - generated image for "{prompt}"')
 
+                # update user status
+                update_user_status_ok(uuid)
+
             # Prompt guided image to image
             elif task_type == 'i2i':
                 img = user_info.get_image()
@@ -79,12 +82,21 @@ def inference_loop():
                     pil_image.save(img_path)
                     # save log
                     inference_logger.log(f'user={uuid} - image conversion with guidance prompt: "{prompt}"')
+
+                    # update user status
+                    update_user_status_ok(uuid)
                 else:
                     inference_logger.log(f'user={uuid} - image not found')
+
+                    # update user status
+                    update_user_status_error(uuid)
 
             # invalid task type
             else:
                 inference_logger.log(f'unknown task type: {task_type}')
+
+                # update user status
+                update_user_status_error(uuid)
 
         torch.cuda.empty_cache()
         remaining_num = get_queue_len()

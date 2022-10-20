@@ -63,7 +63,7 @@ def register_uuid_with_prompt(prompt:str, uuid:str, service:str='tti'):
     data = {
         'prompt': prompt,
         'service': service,
-        'status': 'pending',
+        'status': 0,
     }
     data_str = json.dumps(data)
     client.set(uuid, data_str)
@@ -79,6 +79,32 @@ def get_service_info_by_uuid(uuid:str):
         return data['service']
     return None
 
+def get_status_info_by_uuid(uuid:str):
+    client = RedisClient()
+    data_str = client.get(uuid)
+    client.close()
+    data = json.loads(data_str)
+    if data is not None and 'status' in data:
+        return data['status']
+    return None
+
+def update_user_status(uuid:str, status:int):
+    client = RedisClient()
+    data_str = client.get(uuid)
+    if data_str is None:
+        client.close()
+        return
+    data = json.loads(data_str)
+    data['status'] = status
+    data_str = json.dumps(data)
+    client.set(uuid, data_str)
+    client.close()
+
+def update_user_status_ok(uuid:str):
+    update_user_status(uuid, 1)
+
+def update_user_status_error(uuid:str):
+    update_user_status(uuid, -1)
 
 if __name__ == '__main__':
     import uuid
@@ -95,5 +121,7 @@ if __name__ == '__main__':
 
     test_cli = RedisClient()
     ret = test_cli.get('test_none')
+    # ret is None, since the key does not exist
     print(ret)
 
+    print('All keys:', test_cli.get_all_keys())
