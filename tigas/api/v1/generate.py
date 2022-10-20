@@ -82,6 +82,9 @@ async def generate_sample_image():
         # update the len_of_queue since we appended the new obj
         len_of_queue = get_queue_len()
 
+        # register uuid with prompt to the redis server
+        utils.register_uuid_with_prompt(sample_text, sample_uuid, service='tti')
+
         response_obj = {
             "uuid": sample_uuid,
             "prompt": sample_text,
@@ -128,6 +131,9 @@ async def generate_image_from_text(info : Request):
             # update the len_of_queue since we appended the new obj
             len_of_queue = get_queue_len()
 
+            # register uuid with prompt to the redis server
+            utils.register_uuid_with_prompt(text, sample_uuid, service='tti')
+
             response_obj = {
                 "uuid": sample_uuid,
                 "prompt": text,
@@ -167,15 +173,27 @@ async def get_image_from_uuid(uuid: str):
         if not utils.validate_uuid(uuid):
             tti_logger.log(f'/tti/{uuid} :: error="Invalid UUID"', level='warning')
             return HTTPException(status_code=400, detail="Invalid UUID")
-        
+
         # check if image exists
-        if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
-            tti_logger.log(f'/tti/{uuid} :: error="Image not found"', level='warning')
-            return HTTPException(status_code=404, detail="Image not found")
+        status = utils.get_status(uuid)
+
+        # if status is 'done', return image
+        if status == 1:        
+            # check if image exists
+            if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
+                tti_logger.log(f'/tti/{uuid} :: error="Image not found"', level='warning')
+                return HTTPException(status_code=404, detail="Image not found")
+            # return image
+            tti_logger.log(f'/tti/{uuid} :: success')
+            return FileResponse(f'{IMG_DIR_PATH}{uuid}.png')
         
-        # return image
-        tti_logger.log(f'/tti/{uuid} :: success')
-        return FileResponse(f'{IMG_DIR_PATH}{uuid}.png')
+        # if status is 'error', return error message
+        elif status == -1:
+            tti_logger.log(f'/tti/{uuid} :: error="Error occurred during processing"', level='warning')
+            return HTTPException(status_code=500, detail="Error occurred during processing")
+        
+        # if status is 'waiting', return warning message
+        return HTTPException(status_code=404, detail="Image not found")
     except Exception as e:
         tti_logger.log(f'/tti/{uuid} :: error="{e}"', level='error')
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -190,13 +208,21 @@ async def get_status_from_uuid(uuid: str):
             return HTTPException(status_code=400, detail="Invalid UUID")
         
         # check if image exists
-        if not os.path.isfile(f'{IMG_DIR_PATH}{uuid}.png'):
-            tti_logger.log(f'/tti/{uuid}/status :: error="Image not found"', level='warning')
-            return HTTPException(status_code=404, detail="Image not found")
+        status = utils.get_status(uuid)
+
+        # if status is 'done', return image
+        if status == 1:
+            # return image
+            tti_logger.log(f'/tti/{uuid}/status :: exists')
+            return JSONResponse(content={"status": "ok"})
         
-        # return image
-        tti_logger.log(f'/tti/{uuid}/status :: exists')
-        return JSONResponse(content={"status": "ok"})
+        # if status is 'error', return error message
+        elif status == -1:
+            tti_logger.log(f'/tti/{uuid}/status :: error="status=-1"', level='error')
+            return HTTPException(status_code=500, detail="Error occurred while generating image")
+        
+        tti_logger.log(f'/tti/{uuid}/status :: pending', level='debug')
+        return HTTPException(status_code=400, detail="Status pending")
     except Exception as e:
         tti_logger.log(f'/tti/{uuid}/status :: error="{e}"', level='error')
         raise HTTPException(status_code=500, detail="Internal Server Error")
