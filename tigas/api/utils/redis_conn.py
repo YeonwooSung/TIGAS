@@ -88,6 +88,7 @@ def get_status_info_by_uuid(uuid:str):
         return data['status']
     return None
 
+
 def update_user_status(uuid:str, status:int):
     client = RedisClient()
     data_str = client.get(uuid)
@@ -105,6 +106,13 @@ def update_user_status_ok(uuid:str):
 
 def update_user_status_error(uuid:str):
     update_user_status(uuid, -1)
+
+
+def delete_all():
+    client = RedisClient()
+    client.flushdb()
+    client.close()
+
 
 if __name__ == '__main__':
     import uuid

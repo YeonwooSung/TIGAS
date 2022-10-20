@@ -4,6 +4,7 @@ import yaml
 
 from server import Server
 from api import signin_router
+from api.utils import delete_all
 from diffusion import inference_loop
 
 
@@ -21,6 +22,9 @@ def parse_config():
 
 
 if __name__ == '__main__':
+    print('Clean up all cached uuids in redis...')
+    delete_all()
+
     port, host, name, reload, debug = parse_config()
     server = Server(name=name)
     try:
