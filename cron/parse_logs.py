@@ -92,6 +92,9 @@ def main():
     while True:
         try:
             parse_logs(logs_dir)
+        except Exception as e:
+            print(e)
+        try:
             cleanup_parsed_logs(logs_dir)
         except Exception as e:
             print(e)
