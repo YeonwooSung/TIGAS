@@ -46,7 +46,8 @@ def resize_and_crop(image:Image):
             # crop the middle of the height
             image = crop_image(image)
     else:
-        return image.resize((MAX_SIZE, MAX_SIZE))
+        image = image.resize((MAX_SIZE, MAX_SIZE))
+    return image
 
 
 def preprocess(image):
@@ -60,6 +61,7 @@ def preprocess(image):
     '''
     image = resize_and_crop(image)
 
+    w, h = image.size
     w, h = map(lambda x: x - x % RESIZE_MULTIPLIER, (w, h))  # resize to integer multiple of 32
     image = image.resize((w, h), resample=Image.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
@@ -254,7 +256,7 @@ class CustomTextToImageModel(nn.Module):
 
         # for i, t in enumerate(self.scheduler.timesteps):
         for i, t in enumerate(timesteps):
-            print(latents.shape)
+            #print(latents.shape)
             # expand the latents if we are doing classifier free guidance
             latent_model_input = torch.cat([latents] * 2)
         
