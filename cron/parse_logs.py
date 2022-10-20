@@ -90,8 +90,11 @@ def main():
         os.makedirs(logs_dir)
     interval = calculate_interval()
     while True:
-        parse_logs(logs_dir)
-        cleanup_parsed_logs(logs_dir)
+        try:
+            parse_logs(logs_dir)
+            cleanup_parsed_logs(logs_dir)
+        except Exception as e:
+            print(e)
         time.sleep(interval)
 
 
