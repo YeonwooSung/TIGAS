@@ -63,7 +63,7 @@ def from_image_to_bytes(img):
 
 @router.get("/sample", tags=["generate"])
 async def generate_sample_image():
-    sample_uuid = uuid.uuid4()
+    sample_uuid = str(uuid.uuid4())
     sample_text = 'Dogs running on a beach'
     try:
         obj = utils.TIGAS_Form(prompt=sample_text, uuid=sample_uuid)
@@ -104,7 +104,7 @@ async def generate_image_from_text(info : Request):
     try:
         req_info = await info.json()
         if 'text' in req_info:
-            sample_uuid = uuid.uuid4()
+            sample_uuid = str(uuid.uuid4())
             text = req_info['text']
 
             # validate text -> ascii only (no utf-8, no emoji, no special characters)
