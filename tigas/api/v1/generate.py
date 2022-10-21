@@ -175,7 +175,7 @@ async def get_image_from_uuid(uuid: str):
             return HTTPException(status_code=400, detail="Invalid UUID")
 
         # check if image exists
-        status = utils.get_status(uuid)
+        status = utils.get_status_info_by_uuid(uuid)
 
         # if status is 'done', return image
         if status == 1:        
@@ -208,7 +208,7 @@ async def get_status_from_uuid(uuid: str):
             return HTTPException(status_code=400, detail="Invalid UUID")
         
         # check if image exists
-        status = utils.get_status(uuid)
+        status = utils.get_status_info_by_uuid(uuid)
 
         # if status is 'done', return image
         if status == 1:
