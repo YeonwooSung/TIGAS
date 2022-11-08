@@ -1,7 +1,7 @@
 import torch
 from torch import nn, autocast
 from transformers import CLIPTextModel, CLIPTokenizer
-from diffusers import AutoencoderKL, UNet2DConditionModel, PNDMScheduler
+from diffusers import AutoencoderKL, UNet2DConditionModel, PNDMScheduler, LMSDiscreteScheduler
 
 
 class CustomTextToImageModel(nn.Module):
